@@ -1,0 +1,86 @@
+{
+  "navbar": {
+    "home": "Início",
+    "tools": "Ferramentas",
+    "pricing": "Preços",
+    "login": "Login"
+  },
+  "buttons": {
+    "create": "Criar",
+    "generate": "Gerar",
+    "startNow": "Começar agora",
+    "subscribe": "Assinar Plano",
+    "close": "Fechar",
+    "newChat": "Novo chat",
+    "newImage": "Nova Imagem",
+    "newVideo": "Novo Vídeo",
+    "logout": "Sair da conta"
+  },
+  "dashboard": {
+    "credits": "Créditos",
+    "history": "Histórico",
+    "settings": "Configurações",
+    "generateImage": "Gerar imagem",
+    "generateVideo": "Gerar vídeo",
+    "upload": "Upload",
+    "export": "Exportar",
+    "whatToCreate": "O que você quer criar hoje?",
+    "describeIdea": "Descreva sua ideia e deixe o MAX transformar em realidade.",
+    "describePromptVideo": "Descreva o que deseja criar...",
+    "describePromptImage": "Descreva a imagem que deseja gerar...",
+    "createImageBtn": "Criar Imagem",
+    "createVideoBtn": "Video com IA",
+    "disclaimer": "O MAX pode cometer erros. Confira informações importantes.",
+    "recent": "Recentes",
+    "noConversations": "Nenhuma conversa ainda",
+    "imagesEmpty": "Suas imagens geradas aparecerão aqui.<br />Use o chat para criar imagens com GPT.",
+    "videosEmpty": "Seus vídeos gerados aparecerão aqui.<br />Use o chat para criar vídeos com Grok-3.",
+    "loading": "Carregando...",
+    "adminPanel": "Painel do Administrador",
+    "remainingCredits": "créditos restantes",
+    "chatTab": "Chat",
+    "historyTab": "Histórico"
+  },
+  "plans": {
+    "title": "Planos de Assinatura",
+    "subtitle": "Escolha o plano ideal para as suas criações de vídeo e imagem",
+    "securePayment": "Pagamento seguro e criptografado.",
+    "footerNote": "Os créditos não são cumulativos. Renovação automática pode ser cancelada a qualquer momento.",
+    "period": "/mês",
+    "INICIANTE": {
+      "name": "Iniciante",
+      "badge": "POPULAR",
+      "description": "Para criadores casuais.",
+      "benefits": [
+        "3.000 créditos por mês",
+        "Grok, GPT IMAGEM, Seedance 2.0, Veo 3.1"
+      ],
+      "price": "R$ 39,90"
+    },
+    "CRIADOR": {
+      "name": "Criador",
+      "badge": "",
+      "description": "Para profissionais e criativos.",
+      "recommended": "RECOMENDADO",
+      "benefits": [
+        "6.000 créditos por mês",
+        "Grok, GPT IMAGEM, Seedance 2.0, Veo 3.1",
+        "Sem limite diário de criação"
+      ],
+      "price": "R$ 67,90",
+      "savings": "Economiza R$ 12,01"
+    },
+    "EMPRESAS": {
+      "name": "Empresas",
+      "badge": "MELHOR CUSTO-BENEFÍCIO",
+      "description": "Para agências e negócios.",
+      "benefits": [
+        "20.000 créditos por mês",
+        "Grok, GPT IMAGEM, Seedance 2.0, Veo 3.1",
+        "Sem limite diário de criação"
+      ],
+      "price": "R$ 119,90",
+      "savings": "Economiza R$ 147,90"
+    }
+  }
+}

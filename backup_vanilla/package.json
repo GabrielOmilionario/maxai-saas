@@ -1,0 +1,19 @@
+{
+  "name": "max-ai-saas",
+  "version": "1.0.0",
+  "description": "Premium AI SaaS platform featuring Grok Video, Veo 3 Video, and GPT Image generation",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "form-data": "^4.0.0",
+    "multer": "^1.4.5-lts.1",
+    "@supabase/supabase-js": "^2.43.4"
+  }
+}

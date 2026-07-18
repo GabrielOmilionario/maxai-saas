@@ -1,0 +1,11 @@
+{
+  "name": "Alex Silva",
+  "email": "alex.silva@maxai.com",
+  "plan": "VIP Max Pro",
+  "nextBilling": "17 de Julho de 2026",
+  "creditLimit": 1000,
+  "creditUsed": 45,
+  "currency": "R$",
+  "paymentMethod": "Cartão de Crédito (Visa •••• 5689)",
+  "useMock": true
+}

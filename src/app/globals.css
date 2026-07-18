@@ -1,0 +1,687 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-chatgpt-main: #0B0B0F;
+  --color-chatgpt-bg: #0B0B0F;
+  --color-chatgpt-sidebar: #111118;
+  --color-chatgpt-input: #171722;
+  --color-brand-purple: #7C3AED;
+  --color-brand-purple-light: #A78BFA;
+  --color-brand-blue: #06b6d4;
+  --color-brand-dark: #0B0B0F;
+
+  --radius-small: 12px;
+  --radius-input: 16px;
+  --radius-card: 20px;
+  --radius-media: 20px;
+  --radius-dock: 999px;
+  --radius-pill: 999px;
+
+  --shadow-premium: 0 12px 40px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-subtle: 0 4px 12px rgba(0, 0, 0, 0.2);
+  --shadow-dock: 0 10px 40px rgba(0,0,0,0.4), 0 0 40px rgba(124,58,237,0.08);
+  --shadow-glow-purple: 0 0 30px rgba(124, 58, 237, 0.2);
+}
+
+:root {
+  --background: #0B0B0F;
+  --foreground: #FFFFFF;
+  --sidebar-bg: #111118;
+  --sidebar-width: 280px;
+  --header-height: 64px;
+  --input-min-height: 72px;
+  --font-sans: 'Inter', var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ===================== RESET & SYSTEM BASE ===================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  height: 100%;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100%;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ===================== TYPOGRAPHY ===================== */
+h1 { font-size: 28px; font-weight: 700; line-height: 1.25; letter-spacing: -0.03em; }
+h2 { font-size: 24px; font-weight: 700; line-height: 1.25; letter-spacing: -0.025em; }
+h3 { font-size: 18px; font-weight: 600; line-height: 1.4; letter-spacing: -0.01em; }
+p, span, li, label, input, textarea, select, button {
+  line-height: 1.5;
+}
+
+/* ===================== SIDEBAR ===================== */
+.sidebar-panel {
+  background: #111118;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ===================== HEADER ===================== */
+.app-header {
+  height: var(--header-height);
+  background: rgba(11, 11, 15, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ===================== CHAT MESSAGE STRUCTURE ===================== */
+.chat-bubble-user {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 14px 18px;
+  max-width: 82%;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+  word-break: break-word;
+  box-shadow: var(--shadow-subtle);
+}
+
+.chat-bubble-assistant {
+  background-color: transparent;
+  border-radius: 20px;
+  padding: 14px 0;
+  max-width: 82%;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+/* ===================== PROMPT INPUT PILL ===================== */
+.chat-input-pill {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 72px;
+  padding: 12px 14px;
+  transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 0 40px rgba(124, 58, 237, 0.08);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+}
+
+.chat-input-pill:focus-within {
+  border-color: rgba(124, 58, 237, 0.35);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 0 40px rgba(124, 58, 237, 0.15), 0 0 0 1px rgba(124, 58, 237, 0.1);
+}
+
+/* ===================== PREMIUM SCROLLBARS ===================== */
+.chat-scroll::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* Firefox */
+.chat-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.06) transparent;
+}
+
+/* ===================== ANIMATIONS & TRANSITIONS ===================== */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.85; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-fast {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-up {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes progress-indeterminate {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(0%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(124, 58, 237, 0.2); border-color: rgba(124, 58, 237, 0.25); }
+  50% { box-shadow: 0 0 35px rgba(124, 58, 237, 0.45); border-color: rgba(124, 58, 237, 0.5); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes icon-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.15), 0 8px 32px rgba(0,0,0,0.4); }
+  50% { box-shadow: 0 0 40px rgba(124, 58, 237, 0.35), 0 8px 32px rgba(0,0,0,0.4); }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in-fast {
+  animation: fade-in-fast 0.2s ease both;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-scale-up {
+  animation: scale-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 1.5s linear infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-icon-glow {
+  animation: icon-glow 3s ease-in-out infinite;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* Button interactive states */
+.btn-glow {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.4);
+  pointer-events: none;
+}
+
+.btn-glow:hover::after {
+  opacity: 1;
+}
+
+.btn-glow:active {
+  transform: scale(0.98);
+}
+
+/* Glass containers */
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 18px;
+  box-shadow: var(--shadow-subtle);
+}
+
+/* Sidebar item hover */
+.sidebar-item {
+  transition: all 0.2s ease;
+  border-radius: 10px;
+}
+
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-item.active {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* Quick action buttons */
+.quick-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  white-space: nowrap;
+  backdrop-filter: blur(10px);
+}
+
+.quick-action-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.quick-action-btn:active {
+  transform: scale(0.98) translateY(0);
+}
+
+/* Progress bar animation */
+.progress-bar-animated {
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar-animated::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.6), transparent);
+  animation: progress-indeterminate 1.8s ease-in-out infinite;
+}
+
+/* ===================== UTILITIES ===================== */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid rgba(124, 58, 237, 0.5);
+  outline-offset: 2px;
+}
+
+/* Hero gradient background */
+.hero-bg {
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 40%, rgba(124, 58, 237, 0.12) 0%, transparent 70%),
+    #0B0B0F;
+}
+
+/* Hero icon card */
+.hero-icon-card {
+  width: 80px;
+  height: 80px;
+  border-radius: 24px;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 30px rgba(124, 58, 237, 0.2), 0 8px 32px rgba(0,0,0,0.5);
+}
+
+/* Model selector pill */
+.model-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  color: #A78BFA;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.model-pill:hover {
+  background: rgba(124, 58, 237, 0.18);
+  border-color: rgba(124, 58, 237, 0.3);
+}
+
+/* Upload button */
+.upload-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.25s ease;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.upload-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #FFFFFF;
+  transform: scale(1.05);
+}
+
+/* Credits badge */
+.credits-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.credits-badge:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Plus button in header */
+.header-plus-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.header-plus-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #FFFFFF;
+  transform: scale(1.05);
+}
+
+/* ===================== RESPONSIVE SAFE AREAS ===================== */
+@media (max-width: 767px) {
+  .chat-bubble-user {
+    max-width: 85%;
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+}
+
+/* ===================== DESKTOP CHATGPT-STYLE LAYOUT (≥1024px) ===================== */
+@media (min-width: 1024px) {
+
+  /* ── Sidebar refinements ── */
+  :root {
+    --sidebar-width: 300px;
+  }
+
+  /* Sidebar logo header: more padding & height */
+  .desktop-sidebar-header {
+    height: 72px !important;
+    padding-left: 24px !important;
+    padding-right: 20px !important;
+  }
+
+  /* New Chat button area: more breathing room */
+  .desktop-sidebar-newchat {
+    padding: 20px 20px 16px 20px !important;
+  }
+
+  /* New Chat button itself: taller */
+  .desktop-sidebar-newchat-btn {
+    height: 52px !important;
+    border-radius: 14px !important;
+    font-size: 14px !important;
+  }
+
+  /* Tab bar area: breathing room */
+  .desktop-sidebar-tabs {
+    padding: 0 20px 16px 20px !important;
+  }
+
+  /* Tab bar inner: slightly more padding */
+  .desktop-sidebar-tabs-inner {
+    padding: 4px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Tab button */
+  .desktop-sidebar-tab-btn {
+    padding: 8px 6px !important;
+    border-radius: 10px !important;
+    font-size: 12px !important;
+  }
+
+  /* Divider between tabs and sessions */
+  .desktop-sidebar-divider {
+    margin: 0 20px 4px 20px !important;
+  }
+
+  /* Sessions list container */
+  .desktop-sidebar-sessions {
+    padding: 12px 16px !important;
+  }
+
+  /* "Recentes" label */
+  .desktop-sidebar-section-label {
+    padding: 4px 8px 10px 8px !important;
+    font-size: 11px !important;
+    letter-spacing: 0.1em !important;
+  }
+
+  /* Session items: more padding & gap */
+  .desktop-sidebar-session-item {
+    padding: 10px 14px !important;
+    border-radius: 12px !important;
+    font-size: 13px !important;
+    margin-bottom: 2px !important;
+  }
+
+  /* Session items gap */
+  .desktop-sidebar-sessions-list {
+    gap: 4px !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* User profile footer area */
+  .desktop-sidebar-footer {
+    padding: 16px 16px !important;
+  }
+
+  /* User profile button */
+  .desktop-sidebar-profile-btn {
+    padding: 14px 16px !important;
+    border-radius: 16px !important;
+  }
+
+  /* Footer action buttons (admin, logout) */
+  .desktop-sidebar-footer-action {
+    padding: 10px 14px !important;
+    border-radius: 12px !important;
+    font-size: 13px !important;
+  }
+
+  /* ── Header refinements ── */
+  .desktop-header {
+    height: 72px !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  /* Model selector pill: more padding */
+  .desktop-model-selector {
+    padding: 8px 16px !important;
+    font-size: 14px !important;
+    gap: 8px !important;
+  }
+
+  /* ── Main chat area ── */
+  .desktop-chat-messages {
+    max-width: 768px !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    padding-top: 32px !important;
+    padding-bottom: 160px !important;
+    margin: 0 auto !important;
+  }
+
+  .desktop-chat-messages > .space-y-4 {
+    gap: 24px !important;
+  }
+
+  /* Messages spacing: more vertical gap between messages */
+  .desktop-messages-gap {
+    gap: 24px !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* Loading card: constrain to flow */
+  .desktop-loading-card {
+    max-width: 400px !important;
+  }
+
+  /* ── Footer input area ── */
+  .desktop-footer-input {
+    padding: 16px 24px !important;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Input pill: ChatGPT-style max-width */
+  .desktop-input-pill {
+    max-width: 768px !important;
+    margin: 0 auto !important;
+  }
+
+  /* Chat input pill: more padding and refined radius */
+  .chat-input-pill {
+    border-radius: 28px;
+    padding: 12px 16px;
+    min-height: 76px;
+  }
+
+  /* Upload button: slightly larger */
+  .upload-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* ── Welcome screen ── */
+  .desktop-welcome-container {
+    max-width: 860px !important;
+    gap: 40px !important;
+  }
+
+  /* ── Error banner ── */
+  .desktop-error-banner {
+    max-width: 768px !important;
+  }
+
+  /* ── General spacing refinements ── */
+  .desktop-header-left-group {
+    gap: 12px !important;
+  }
+
+  .desktop-header-right-group {
+    gap: 12px !important;
+  }
+
+  /* Credits badge: slightly larger */
+  .credits-badge {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  /* Header plus button: slightly larger */
+  .header-plus-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Quick action buttons: more breathing room */
+  .quick-action-btn {
+    height: 46px;
+    padding: 0 20px;
+    font-size: 14px;
+  }
+}

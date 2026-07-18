@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MAX - IA SaaS</title>
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <!-- Authentication Screen (Glassmorphism Overlay) -->
+  <div class="auth-container" id="auth-container">
+    <div class="auth-card glass">
+      <div class="auth-header-brand">
+        <div class="auth-logo-glow"></div>
+        <img src="logo.png" class="auth-logo-img" alt="MAX">
+        <h2>MAX AI 2.0</h2>
+        <p>Criação de vídeos cinemáticos e imagens impressionantes</p>
+      </div>
+      
+      <!-- Tabs -->
+      <div class="auth-tabs">
+        <button class="auth-tab-btn active" id="tab-login-btn">Entrar</button>
+        <button class="auth-tab-btn" id="tab-register-btn">Criar Conta</button>
+      </div>
+      
+      <!-- Login Form -->
+      <form class="auth-form" id="login-form">
+        <div class="form-group">
+          <label for="login-email">E-mail</label>
+          <input type="email" id="login-email" required placeholder="seu@email.com">
+        </div>
+        <div class="form-group">
+          <label for="login-password">Senha</label>
+          <input type="password" id="login-password" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="login-submit-btn">Entrar</button>
+      </form>
+      
+      <!-- Register Form -->
+      <form class="auth-form" id="register-form" style="display: none;">
+        <div class="form-group">
+          <label for="register-name">Nome Completo</label>
+          <input type="text" id="register-name" required placeholder="Seu nome">
+        </div>
+        <div class="form-group">
+          <label for="register-email">E-mail</label>
+          <input type="email" id="register-email" required placeholder="seu@email.com">
+        </div>
+        <div class="form-group">
+          <label for="register-password">Senha</label>
+          <input type="password" id="register-password" required placeholder="Mínimo 6 caracteres">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="register-submit-btn">Criar Conta</button>
+      </form>
+
+      <div class="auth-error-badge" id="auth-error-badge" style="display: none;">
+        <i data-lucide="alert-circle"></i>
+        <span id="auth-error-message">Erro ao autenticar</span>
+      </div>
+
+      <div class="auth-divider">ou</div>
+      
+      <button class="btn btn-secondary btn-block" id="auth-demo-btn">
+        Continuar no Modo de Demonstração
+      </button>
+    </div>
+  </div>
+
+  <div class="sidebar-overlay-mask" id="sidebar-overlay-mask"></div>
+  <div class="app-container" id="app-container" style="display: none;">
+    
+    <!-- Sliding Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <img src="logo.png" class="logo-img" alt="MAX">
+          <span>MAX</span>
+        </div>
+        <button class="icon-btn close-sidebar-btn" id="close-sidebar-btn">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      
+      <button class="new-chat-btn" id="new-chat-btn">
+        <i data-lucide="plus"></i>
+        <span>Nova Conversa</span>
+      </button>
+
+      <button class="gallery-sidebar-btn" id="gallery-btn">
+        <i data-lucide="grid"></i>
+        <span>Minhas Gerações</span>
+      </button>
+      
+      <div class="sidebar-history-container">
+        <div class="history-label">Histórico de Conversas</div>
+        <div class="history-list" id="history-list">
+          <!-- Dynamically loaded history items -->
+          <div class="history-empty">Nenhuma conversa recente</div>
+        </div>
+      </div>
+      
+      <!-- Profile Box -->
+      <div class="sidebar-profile" id="sidebar-profile-btn">
+        <div class="profile-avatar"><img src="logo.png" class="profile-avatar-img" alt="Avatar"></div>
+        <div class="profile-info">
+          <div class="profile-name" id="profile-name-display">Alex Silva</div>
+          <div class="profile-plan-badge" id="profile-plan-display">VIP Max Pro</div>
+        </div>
+        <i data-lucide="chevron-right" class="profile-arrow"></i>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- Top Bar Navigation -->
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <button class="icon-btn sidebar-toggle-btn" id="sidebar-toggle-btn">
+            <i data-lucide="menu"></i>
+          </button>
+        </div>
+        
+        <div class="top-bar-center">
+          <div class="top-bar-logo-group">
+            <img src="logo.png" class="topbar-logo-img" alt="MAX">
+            <span class="app-title">MAX</span>
+          </div>
+          <div class="active-model-badge" id="active-model-badge">
+            <i data-lucide="video" class="badge-icon"></i>
+            <span id="active-model-text">Grok - Vídeo</span>
+          </div>
+        </div>
+
+        <div class="top-bar-right">
+          <!-- Quick Status indicator -->
+          <button class="icon-btn settings-quick-btn" id="settings-quick-btn">
+            <i data-lucide="sliders"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Chat Screen / Welcome Area -->
+      <div class="chat-area" id="chat-area">
+
+        <!-- Gallery Screen -->
+        <div class="gallery-container" id="gallery-container" style="display: none;">
+          <div class="gallery-header">
+            <div class="gallery-header-left">
+              <i data-lucide="grid" class="gallery-header-icon"></i>
+              <div>
+                <h2>Minhas Gerações</h2>
+                <p>Todos os vídeos e imagens que você criou com o MAX AI</p>
+              </div>
+            </div>
+            <div class="gallery-header-actions">
+              <div class="gallery-filter-tabs" id="gallery-filter-tabs">
+                <button class="gallery-filter-btn active" data-filter="all">Tudo</button>
+                <button class="gallery-filter-btn" data-filter="video"><i data-lucide="video"></i> Vídeos</button>
+                <button class="gallery-filter-btn" data-filter="image"><i data-lucide="image"></i> Imagens</button>
+              </div>
+            </div>
+          </div>
+          <div class="gallery-grid" id="gallery-grid">
+            <div class="gallery-loading" id="gallery-loading">
+              <div class="gallery-loader-animation"></div>
+              <p>Carregando gerações...</p>
+            </div>
+          </div>
+          <div class="gallery-empty" id="gallery-empty" style="display: none;">
+            <i data-lucide="image-off" class="gallery-empty-icon"></i>
+            <h3>Nenhuma geração ainda</h3>
+            <p>Crie seu primeiro vídeo ou imagem com o MAX AI!</p>
+            <button class="btn btn-primary" id="gallery-start-btn">Começar a Criar</button>
+          </div>
+        </div>
+
+        <!-- Welcome Screen (Shown when history is empty) -->
+        <div class="welcome-container" id="welcome-container">
+          <div class="welcome-logo-container">
+            <div class="welcome-logo-glow"></div>
+            <img src="logo.png" class="welcome-logo-img" alt="MAX">
+          </div>
+          <h1 class="welcome-title">Como posso ajudar você hoje?</h1>
+          <p class="welcome-subtitle">MAX AI — Crie vídeos cinemáticos e imagens impressionantes em segundos.</p>
+          
+          <div class="suggestions-grid">
+            <div class="suggestion-card" data-prompt="Uma cidade futurista com carros voadores à noite no estilo cyberpunk" data-model="grok">
+              <div class="card-icon"><i data-lucide="video"></i></div>
+              <h3>Cidade Cyberpunk</h3>
+              <p>Gere um vídeo no Grok com neon e veículos voadores.</p>
+            </div>
+            <div class="suggestion-card" data-prompt="Um lago calmo cercado por montanhas ao pôr do sol com reflexos suaves na água" data-model="veo">
+              <div class="card-icon"><i data-lucide="sparkles"></i></div>
+              <h3>Pôr do Sol Sereno</h3>
+              <p>Gere um vídeo realista de 8s com o Veo 3.1.</p>
+            </div>
+            <div class="suggestion-card" data-prompt="Um astronauta tocando guitarra na lua, cercado por estrelas brilhantes e galáxias distantes, estilo fantasia cinemática" data-model="gpt-image">
+              <div class="card-icon"><i data-lucide="image"></i></div>
+              <h3>Astronauta Artista</h3>
+              <p>Gere uma imagem super realista com o GPT Image.</p>
+            </div>
+            <div class="suggestion-card" data-prompt="Animação abstrata de fluidos coloridos se misturando em alta definição" data-model="grok">
+              <div class="card-icon"><i data-lucide="wand-2"></i></div>
+              <h3>Fluidos Abstratos</h3>
+              <p>Gere movimentos fluidos e dinâmicos com o Grok.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Conversation Messages List -->
+        <div class="messages-list" id="messages-list" style="display: none;">
+          <!-- Dynamically populated chats -->
+        </div>
+
+      </div>
+
+      <!-- Bottom Chat Form Input Area -->
+      <footer class="input-container">
+        
+        <!-- Active Model Parameters Pill Indicator -->
+        <div class="params-summary-bar" id="params-summary-bar">
+          <span class="params-text" id="params-summary-text">Configurações: Grok, 480p, 6s, 16:9</span>
+          <button class="params-edit-btn" id="params-edit-btn">Ajustar <i data-lucide="chevron-up"></i></button>
+        </div>
+
+        <div class="input-form-wrapper">
+          <!-- Attachment Preview Row -->
+          <div class="attachment-preview-row" id="attachment-preview-row" style="display: none;">
+            <!-- Uploaded reference files shown here -->
+          </div>
+
+          <div class="input-row">
+            <!-- Toggle Menu Plus Button -->
+            <button class="plus-btn" id="plus-menu-btn" title="Modelos e Mídia">
+              <i data-lucide="plus"></i>
+            </button>
+
+            <!-- Text Input Area -->
+            <textarea class="prompt-input" id="prompt-input" rows="1" placeholder="Mensagem para o MAX..." autocomplete="off"></textarea>
+
+            <!-- Submit Send Button -->
+            <button class="send-btn" id="send-btn" disabled>
+              <i data-lucide="arrow-up"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Plus Action Popover Menu -->
+        <div class="plus-popover" id="plus-popover">
+          <div class="popover-section-title">Selecionar Modelo</div>
+          <button class="popover-item active" data-action="select-model" data-model="grok">
+            <i data-lucide="video" class="popover-icon text-purple"></i>
+            <div class="popover-item-text">
+              <div class="popover-item-title">Grok - Vídeo</div>
+              <div class="popover-item-desc">Vídeos rápidos e divertidos</div>
+            </div>
+          </button>
+          
+          <button class="popover-item" data-action="select-model" data-model="veo">
+            <i data-lucide="sparkles" class="popover-icon text-cyan"></i>
+            <div class="popover-item-text">
+              <div class="popover-item-title">Veo 3 - Vídeo</div>
+              <div class="popover-item-desc">Vídeos ultra-realistas em alta definição</div>
+            </div>
+          </button>
+          
+          <button class="popover-item" data-action="select-model" data-model="gpt-image">
+            <i data-lucide="image" class="popover-icon text-emerald"></i>
+            <div class="popover-item-text">
+              <div class="popover-item-title">GPT - Imagem</div>
+              <div class="popover-item-desc">Imagens artísticas e realistas</div>
+            </div>
+          </button>
+
+          <div class="popover-divider"></div>
+          
+          <div class="popover-section-title">Mídia de Referência</div>
+          <button class="popover-item" data-action="upload-image">
+            <i data-lucide="paperclip" class="popover-icon"></i>
+            <div class="popover-item-text">
+              <div class="popover-item-title">Adicionar imagem</div>
+              <div class="popover-item-desc">Carregar arquivo do dispositivo</div>
+            </div>
+          </button>
+          
+          <button class="popover-item" data-action="open-camera">
+            <i data-lucide="camera" class="popover-icon"></i>
+            <div class="popover-item-text">
+              <div class="popover-item-title">Câmera</div>
+              <div class="popover-item-desc">Tirar uma foto na hora</div>
+            </div>
+          </button>
+        </div>
+
+        <!-- Hidden input for file upload -->
+        <input type="file" id="file-uploader" accept="image/*" multiple style="display: none;">
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL DIALOGS
+       ========================================================================== -->
+
+  <!-- Profile & Settings Modal -->
+  <div class="modal-overlay" id="profile-modal">
+    <div class="modal-content glass">
+      <div class="modal-header">
+        <h2>Detalhes do Perfil - MAX</h2>
+        <button class="icon-btn modal-close-btn" id="profile-modal-close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Profile Summary Panel -->
+        <div class="profile-card-detailed">
+          <div class="profile-large-avatar">AS</div>
+          <div class="profile-card-text">
+            <h3 id="profile-modal-name">Alex Silva</h3>
+            <p id="profile-modal-email">alex.silva@maxai.com</p>
+          </div>
+        </div>
+
+        <!-- Billing Info Grid -->
+        <div class="billing-info-grid">
+          <div class="info-tile">
+            <span class="tile-label">Assinatura Atual</span>
+            <span class="tile-value text-glow-indigo" id="profile-modal-plan">VIP Max Pro</span>
+          </div>
+          <div class="info-tile">
+            <span class="tile-label">Próxima Cobrança</span>
+            <span class="tile-value" id="profile-modal-billing">17 de Julho de 2026</span>
+          </div>
+          <div class="info-tile">
+            <span class="tile-label">Método de Pagamento</span>
+            <span class="tile-value" id="profile-modal-payment">Cartão de Crédito (Visa •••• 5689)</span>
+          </div>
+          <div class="info-tile">
+            <span class="tile-label">Créditos de Geração</span>
+            <span class="tile-value" id="profile-modal-credits">120 / 1000 créditos</span>
+            <div class="progress-bar-container mt-1">
+              <div class="progress-bar" id="profile-modal-credits-bar" style="width: 12%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Settings Options -->
+        <div class="settings-section mt-2">
+          <h3>Preferências da Conta</h3>
+          
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-title">Modo de Simulação (Mock)</div>
+              <div class="setting-desc">Simula chamadas de API caso suas chaves expirem ou queira testar rapidamente offline.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="mock-toggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-title">Nome do Usuário</div>
+              <input type="text" class="text-input" id="profile-name-input" value="Alex Silva">
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-title">E-mail do Usuário</div>
+              <input type="email" class="text-input" id="profile-email-input" value="alex.silva@maxai.com">
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="profile-modal-logout" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; margin-right: auto;">Sair da Conta</button>
+        <button class="btn btn-secondary" id="profile-modal-cancel">Cancelar</button>
+        <button class="btn btn-primary" id="profile-modal-save">Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Model Parameters Configuration Modal -->
+  <div class="modal-overlay" id="params-modal">
+    <div class="modal-content glass">
+      <div class="modal-header">
+        <h2 id="params-modal-title">Configurações do Modelo</h2>
+        <button class="icon-btn modal-close-btn" id="params-modal-close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      
+      <div class="modal-body" id="params-modal-body">
+        
+        <!-- GROK VIDEO OPTIONS -->
+        <div class="model-params-panel" id="params-panel-grok" style="display: none;">
+          <div class="param-group">
+            <label class="param-label">Resolução</label>
+            <div class="pill-selector" id="grok-resolution">
+              <button class="pill-btn active" data-val="480p">480p (Padrão)</button>
+              <button class="pill-btn" data-val="720p">720p (HD)</button>
+            </div>
+          </div>
+
+          <div class="param-group">
+            <label class="param-label">Proporção (Aspect Ratio)</label>
+            <div class="pill-selector" id="grok-aspect">
+              <button class="pill-btn active" data-val="landscape">Landscape (16:9)</button>
+              <button class="pill-btn" data-val="portrait">Portrait (9:16)</button>
+              <button class="pill-btn" data-val="square">Square (1:1)</button>
+              <button class="pill-btn" data-val="vertical">Vertical (2:3)</button>
+              <button class="pill-btn" data-val="horizontal">Horizontal (3:2)</button>
+            </div>
+          </div>
+
+          <div class="param-group">
+            <label class="param-label">Duração (Segundos)</label>
+            <div class="pill-selector" id="grok-duration">
+              <button class="pill-btn active" data-val="6">6s</button>
+              <button class="pill-btn" data-val="10">10s</button>
+            </div>
+          </div>
+
+          <div class="param-group">
+            <label class="param-label">Modo de Geração (Foco)</label>
+            <div class="pill-selector" id="grok-mode">
+              <button class="pill-btn active" data-val="custom">Personalizado</button>
+              <button class="pill-btn" data-val="normal">Normal</button>
+              <button class="pill-btn" data-val="extremely-crazy">Extremamente Louco (Fun)</button>
+              <button class="pill-btn" data-val="extremely-spicy-or-crazy">Super Picante (Spicy)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- VEO VIDEO OPTIONS -->
+        <div class="model-params-panel" id="params-panel-veo" style="display: none;">
+          <div class="param-group">
+            <label class="param-label">Versão do Modelo Veo</label>
+            <select class="select-dropdown" id="veo-model">
+              <option value="veo-3.1" selected>Veo 3.1 (Qualidade Avançada, 8s, 16:9)</option>
+              <option value="veo-3.1-fast">Veo 3.1 Fast (Mais Rápido, 8s, 16:9)</option>
+              <option value="veo-2">Veo 2 (Várias Proporções, 8s)</option>
+              <option value="veo-3.1-lite">Veo 3.1 Lite (Vídeo com Áudio Sincronizado)</option>
+              <option value="omni-flash">Omni Flash (Geração de 10s ou Edição)</option>
+            </select>
+          </div>
+
+          <div class="param-group">
+            <label class="param-label">Resolução</label>
+            <div class="pill-selector" id="veo-resolution">
+              <button class="pill-btn active" data-val="720p">720p (Padrão)</button>
+              <button class="pill-btn" data-val="1080p" id="veo-res-1080">1080p (Full HD)</button>
+            </div>
+            <div class="helper-info" id="veo-res-helper" style="display: none;">Nota: Veo 2 suporta apenas 720p.</div>
+          </div>
+
+          <div class="param-group">
+            <label class="param-label">Duração (Segundos)</label>
+            <div class="pill-selector" id="veo-duration">
+              <button class="pill-btn" data-val="4">4s</button>
+              <button class="pill-btn" data-val="6">6s</button>
+              <button class="pill-btn active" data-val="8">8s (Fixo)</button>
+              <button class="pill-btn" data-val="10" id="veo-dur-10" style="display: none;">10s (Omni Flash)</button>
+            </div>
+            <div class="helper-info" id="veo-dur-helper">Nota: Veo 3.1 tem duração fixa de 8s.</div>
+          </div>
+
+          <div class="param-group">
+            <label class="param-label">Proporção (Aspect Ratio)</label>
+            <div class="pill-selector" id="veo-aspect">
+              <button class="pill-btn active" data-val="16:9">Widescreen (16:9)</button>
+              <button class="pill-btn" data-val="9:16" id="veo-aspect-916" style="display: none;">Mobile (9:16)</button>
+            </div>
+            <div class="helper-info" id="veo-aspect-helper">Nota: Veo 3.1 suporta apenas proporção 16:9.</div>
+          </div>
+
+          <div class="param-group">
+            <label class="param-label">Modo da Imagem de Referência</label>
+            <div class="pill-selector" id="veo-mode-image">
+              <button class="pill-btn active" data-val="frame">Frame (Start/End - Max 2 imagens)</button>
+              <button class="pill-btn" data-val="ingredient">Ingredient (Mix - Max 3 imagens)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- GPT IMAGE OPTIONS -->
+        <div class="model-params-panel" id="params-panel-gpt-image" style="display: none;">
+          <div class="param-group">
+            <label class="param-label">Versão do Modelo GPT</label>
+            <select class="select-dropdown" id="gpt-model">
+              <option value="gpt-image-2-text-to-image" selected>GPT Image 2 (Mais Recente)</option>
+              <option value="gpt-image-1.5">GPT Image 1.5 (Estável)</option>
+            </select>
+          </div>
+
+          <div class="param-group">
+            <label class="param-label">Proporção da Imagem (Aspect Ratio)</label>
+            <div class="pill-selector" id="gpt-aspect">
+              <button class="pill-btn active" data-val="auto">Auto</button>
+              <button class="pill-btn" data-val="1:1">Quadrado (1:1)</button>
+              <button class="pill-btn" data-val="16:9">Paisagem (16:9)</button>
+              <button class="pill-btn" data-val="9:16">Retrato (9:16)</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-primary btn-block" id="params-modal-save">Aplicar Configurações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Camera Dialog Capture Modal -->
+  <div class="modal-overlay" id="camera-modal">
+    <div class="modal-content glass camera-modal-content">
+      <div class="modal-header">
+        <h2>Capturar Foto</h2>
+        <button class="icon-btn modal-close-btn" id="camera-modal-close">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body flex-center">
+        <div class="camera-stream-wrapper">
+          <video id="camera-stream" autoplay playsinline></video>
+          <canvas id="camera-canvas" style="display: none;"></canvas>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="camera-modal-cancel">Cancelar</button>
+        <button class="btn btn-primary" id="camera-modal-capture">
+          <i data-lucide="camera" class="mr-1"></i> Tirar Foto
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Lightbox Modal -->
+  <div class="lightbox" id="lightbox">
+    <button class="icon-btn lightbox-close" id="lightbox-close">
+      <i data-lucide="x"></i>
+    </button>
+    <img src="" alt="Zoomed output" class="lightbox-img" id="lightbox-img">
+    <div class="lightbox-actions">
+      <a href="" download class="btn btn-primary" id="lightbox-download">
+        <i data-lucide="download" class="mr-1"></i> Baixar Imagem
+      </a>
+    </div>
+  </div>
+
+  <!-- Client Script loader -->
+  <script src="index.js"></script>
+</body>
+</html>
