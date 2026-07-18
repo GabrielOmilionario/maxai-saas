@@ -1131,9 +1131,9 @@ function DashboardContent() {
 
           {/* Plus */}
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push('/buy-credits')}
             className="header-plus-btn"
-            title="Nova Conversa"
+            title="Comprar Créditos"
           >
             <Plus className="w-4 h-4" />
           </button>
