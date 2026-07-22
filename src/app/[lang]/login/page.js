@@ -30,7 +30,13 @@ export default function LoginPage() {
       })
 
       if (signInError) {
-        setError(signInError.message)
+        let msg = signInError.message
+        if (msg.toLowerCase().includes('email not confirmed')) {
+          msg = 'E-mail não confirmado. Por favor, verifique seu e-mail para confirmar sua conta.'
+        } else if (msg.toLowerCase().includes('invalid login credentials') || msg.toLowerCase().includes('invalid credentials')) {
+          msg = 'E-mail ou senha incorretos.'
+        }
+        setError(msg)
       } else {
         router.push('/dashboard')
         router.refresh()
