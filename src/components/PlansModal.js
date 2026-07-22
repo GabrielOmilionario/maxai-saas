@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useEffect } from 'react'
-import { X, Sparkles, Lock, Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { X, Sparkles, Lock, Check, ChevronLeft, ChevronRight, Gift } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useI18n } from '@/context/I18nContext'
 import { PLANS } from '@/lib/plans-meta'
@@ -31,7 +31,9 @@ export default function PlansModal({ isOpen, onClose }) {
       btnStyle: 'purple',
       checkoutUrl: PLANS.INICIANTE.checkoutLinks[lang],
       recommended: false,
-      savings: pt.INICIANTE?.savings || '',
+      bonusLabel: pt.INICIANTE?.bonusLabel || '',
+      bonusAmount: pt.INICIANTE?.bonusAmount || '',
+      bonusText: pt.INICIANTE?.bonusText || '',
     },
     {
       key: 'CRIADOR',
@@ -52,7 +54,9 @@ export default function PlansModal({ isOpen, onClose }) {
       checkoutUrl: PLANS.CRIADOR.checkoutLinks[lang],
       recommended: true,
       recLabel: pt.CRIADOR?.recommended || 'RECOMENDADO',
-      savings: pt.CRIADOR?.savings || '',
+      bonusLabel: pt.CRIADOR?.bonusLabel || '',
+      bonusAmount: pt.CRIADOR?.bonusAmount || '',
+      bonusText: pt.CRIADOR?.bonusText || '',
     },
     {
       key: 'EMPRESAS',
@@ -72,7 +76,9 @@ export default function PlansModal({ isOpen, onClose }) {
       btnStyle: 'dark',
       checkoutUrl: PLANS.EMPRESAS.checkoutLinks[lang],
       recommended: false,
-      savings: pt.EMPRESAS?.savings || '',
+      bonusLabel: pt.EMPRESAS?.bonusLabel || '',
+      bonusAmount: pt.EMPRESAS?.bonusAmount || '',
+      bonusText: pt.EMPRESAS?.bonusText || '',
     },
   ]
 
@@ -357,7 +363,7 @@ function PlanCard({ plan }) {
       className="plan-card-wrapper"
       style={{
         width: '320px',
-        height: '410px',
+        minHeight: '410px',
         padding: '24px',
         borderRadius: '24px',
         flex: 'none',
@@ -432,7 +438,7 @@ function PlanCard({ plan }) {
         display: 'flex',
         alignItems: 'baseline',
         gap: '4px',
-        marginBottom: plan.savings ? '4px' : '20px',
+        marginBottom: plan.bonusAmount ? '16px' : '20px',
       }}>
         <span style={{
           fontSize: '32px',
@@ -452,14 +458,52 @@ function PlanCard({ plan }) {
         </span>
       </div>
 
-      {plan.savings && (
+      {plan.bonusAmount && (
         <div style={{
-          fontSize: '13px',
-          color: '#00E676',
+          border: '2px solid #00E676',
+          borderRadius: '14px',
+          padding: '12px 16px',
           marginBottom: '20px',
-          fontWeight: '600',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          background: 'rgba(0, 230, 118, 0.06)',
         }}>
-          {plan.savings}
+          <Gift style={{
+            width: '28px',
+            height: '28px',
+            color: '#00E676',
+            flexShrink: 0,
+          }} />
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{
+              fontSize: '10px',
+              fontWeight: '700',
+              color: '#00E676',
+              letterSpacing: '0.08em',
+              lineHeight: '1.2',
+            }}>
+              {plan.bonusLabel}
+            </span>
+            <span style={{
+              fontSize: '26px',
+              fontWeight: '800',
+              color: '#00E676',
+              letterSpacing: '-0.02em',
+              lineHeight: '1.1',
+            }}>
+              {plan.bonusAmount}
+            </span>
+            <span style={{
+              fontSize: '11px',
+              fontWeight: '700',
+              color: '#00E676',
+              letterSpacing: '0.06em',
+              lineHeight: '1.2',
+            }}>
+              {plan.bonusText}
+            </span>
+          </div>
         </div>
       )}
 
@@ -497,7 +541,19 @@ function PlanCard({ plan }) {
               marginTop: '1px',
               strokeWidth: 3,
             }} />
-            {b}
+            {(() => {
+              const bonusMatch = b.match(/^(.+?)(\+ [\d.]+ \(Bônus\)|\+ [\d.]+ \(Bonus\))(.*)$/);
+              if (bonusMatch) {
+                return (
+                  <span>
+                    {bonusMatch[1]}
+                    <span style={{ color: '#00E676', fontWeight: '700' }}>{bonusMatch[2]}</span>
+                    {bonusMatch[3]}
+                  </span>
+                );
+              }
+              return b;
+            })()}
           </li>
         ))}
       </ul>

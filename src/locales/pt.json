@@ -63,24 +63,28 @@
       "description": "Para profissionais e criativos.",
       "recommended": "RECOMENDADO",
       "benefits": [
-        "6.000 créditos por mês",
+        "5.000 + 1.000 (Bônus) créditos por mês",
         "Grok, GPT IMAGEM, Seedance 2.0, Veo 3.1",
         "Sem limite diário de criação"
       ],
       "price": "R$ 67,90",
-      "savings": "Economiza R$ 12,01"
+      "bonusLabel": "VOCÊ GANHA",
+      "bonusAmount": "1.000",
+      "bonusText": "CRÉDITOS GRÁTIS!"
     },
     "EMPRESAS": {
       "name": "Empresas",
       "badge": "MELHOR CUSTO-BENEFÍCIO",
       "description": "Para agências e negócios.",
       "benefits": [
-        "20.000 créditos por mês",
+        "9.000 + 9.000 (Bônus) créditos por mês",
         "Grok, GPT IMAGEM, Seedance 2.0, Veo 3.1",
         "Sem limite diário de criação"
       ],
       "price": "R$ 119,90",
-      "savings": "Economiza R$ 147,90"
+      "bonusLabel": "VOCÊ GANHA",
+      "bonusAmount": "9.000",
+      "bonusText": "CRÉDITOS GRÁTIS!"
     }
   }
 }
