@@ -1,14 +1,23 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
-const locales = ['pt', 'es']
+const locales = ['pt', 'es', 'en']
 const defaultLocale = 'pt'
 
 function getLocale(request) {
+  const cookieLocale = request.cookies.get('NEXT_LOCALE')?.value
+  if (cookieLocale && locales.includes(cookieLocale)) {
+    return cookieLocale
+  }
+
   const acceptLanguage = request.headers.get('accept-language')
   if (!acceptLanguage) return defaultLocale
+  const enIndex = acceptLanguage.indexOf('en')
   const esIndex = acceptLanguage.indexOf('es')
   const ptIndex = acceptLanguage.indexOf('pt')
+  if (enIndex !== -1 && (ptIndex === -1 || enIndex < ptIndex) && (esIndex === -1 || enIndex < esIndex)) {
+    return 'en'
+  }
   if (esIndex !== -1 && (ptIndex === -1 || esIndex < ptIndex)) {
     return 'es'
   }
@@ -63,6 +72,7 @@ export async function proxy(request) {
     return NextResponse.redirect(newUrl)
   } else {
     locale = path.split('/')[1]
+    supabaseResponse.cookies.set('NEXT_LOCALE', locale, { path: '/', maxAge: 60 * 60 * 24 * 365 })
   }
 
   // 3. Checagem de Autenticação Supabase

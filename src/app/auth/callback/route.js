@@ -12,5 +12,5 @@ export async function GET(request) {
 
   // URL to redirect to after sign in process completes
   // We'll use the origin to redirect to the dashboard with the default language
-  return NextResponse.redirect(`${requestUrl.origin}/pt/dashboard`)
+  return NextResponse.redirect(`${requestUrl.origin}/dashboard`)
 }
