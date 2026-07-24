@@ -31,7 +31,7 @@ export async function uploadRemoteUrlToSupabase(remoteUrl, fileType) {
       .from('media')
       .upload(uniqueName, buffer, {
         contentType,
-        cacheControl: '3600',
+        cacheControl: '31536000',
         upsert: true,
       })
 
@@ -72,7 +72,7 @@ export async function uploadBase64ToSupabase(base64Data) {
       .from('media')
       .upload(uniqueName, buffer, {
         contentType,
-        cacheControl: '3600',
+        cacheControl: '31536000',
         upsert: true,
       })
       

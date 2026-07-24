@@ -62,13 +62,11 @@ export async function POST(request) {
       if (resolution === '720p') {
         if (String(duration) === '6') videoCost = 80;
         else if (String(duration) === '10') videoCost = 105;
-        else if (String(duration) === '15') videoCost = 130;
         else videoCost = 80;
       } else {
         // 480p
         if (String(duration) === '6') videoCost = 55;
         else if (String(duration) === '10') videoCost = 80;
-        else if (String(duration) === '15') videoCost = 105;
         else videoCost = 55;
       }
     }
@@ -127,12 +125,14 @@ export async function POST(request) {
     let isMock = false
     let apiErrorMsg = null
 
-    if (isSeedance && !seedanceApiKey) {
+    const isSeedanceOrGrok = isSeedance || isGrok;
+
+    if (isSeedanceOrGrok && !seedanceApiKey) {
       if (!isAdminUser) {
         await supabaseAdmin.from('profiles').update({ credit_used: profile.credit_used }).eq('id', user.id)
       }
       return NextResponse.json({ error: 'Erro: A chave de API (KIE_API_KEY) não está configurada no servidor.' }, { status: 500 })
-    } else if (!isSeedance && !apiKey) {
+    } else if (!isSeedanceOrGrok && !apiKey) {
       if (!isAdminUser) {
         await supabaseAdmin.from('profiles').update({ credit_used: profile.credit_used }).eq('id', user.id)
       }
@@ -143,27 +143,76 @@ export async function POST(request) {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 55000)
 
-        if (isSeedance) {
+        if (isSeedance || isGrok) {
           const callBackUrl = process.env.NEXT_PUBLIC_SITE_URL 
             ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook/video`
             : `https://${request.headers.get('host')}/api/webhook/video`;
 
-          const seedancePayload = {
-            model: "bytedance/seedance-2-fast",
-            callBackUrl: callBackUrl,
-            input: {
-              prompt: prompt,
-              resolution: resolution || '720p',
-              aspect_ratio: aspect_ratio || '16:9',
-              duration: parseInt(duration) || 5,
-            }
-          };
+          let mappedAspectRatio = aspect_ratio || '16:9';
+          if (mappedAspectRatio === 'landscape') mappedAspectRatio = '16:9';
+          else if (mappedAspectRatio === 'portrait') mappedAspectRatio = '9:16';
+          else if (mappedAspectRatio === 'square') mappedAspectRatio = '1:1';
+          else if (mappedAspectRatio === 'vertical') mappedAspectRatio = '2:3';
+          else if (mappedAspectRatio === 'horizontal') mappedAspectRatio = '3:2';
 
-          if (uploadedRefImageUrl) {
-            seedancePayload.input.first_frame_url = uploadedRefImageUrl;
+          let payload = {};
+
+          if (isSeedance) {
+            payload = {
+              model: "bytedance/seedance-2-fast",
+              callBackUrl: callBackUrl,
+              input: {
+                prompt: prompt,
+                resolution: resolution || '720p',
+                aspect_ratio: mappedAspectRatio,
+                duration: parseInt(duration) || 5,
+              }
+            };
+            if (uploadedRefImageUrl) {
+              payload.input.first_frame_url = uploadedRefImageUrl;
+            }
+          } else if (isGrok) {
+            if (isExtend) {
+              const actualExtendId = extendVideoId.includes('|id:') ? extendVideoId.split('|id:')[1] : extendVideoId;
+              payload = {
+                model: "grok-imagine/extend",
+                callBackUrl: callBackUrl,
+                input: {
+                  task_id: actualExtendId,
+                  prompt: prompt,
+                  extend_at: 2,
+                  extend_times: parseInt(duration) || 6,
+                }
+              };
+            } else if (uploadedRefImageUrl) {
+              payload = {
+                model: "grok-imagine/image-to-video",
+                callBackUrl: callBackUrl,
+                input: {
+                  image_urls: [uploadedRefImageUrl],
+                  prompt: prompt,
+                  mode: "normal",
+                  resolution: resolution || '480p',
+                  aspect_ratio: mappedAspectRatio,
+                  duration: parseInt(duration) || 6,
+                }
+              };
+            } else {
+              payload = {
+                model: "grok-imagine/text-to-video",
+                callBackUrl: callBackUrl,
+                input: {
+                  prompt: prompt,
+                  mode: "normal",
+                  resolution: resolution || '480p',
+                  aspect_ratio: mappedAspectRatio,
+                  duration: parseInt(duration) || 6,
+                }
+              };
+            }
           }
 
-          console.log(`[GENERATE-VIDEO] Sending Seedance 2.0 Request`);
+          console.log(`[GENERATE-VIDEO] Sending Request to Kie API (${modelName})`);
 
           apiResponse = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
             method: 'POST',
@@ -171,7 +220,7 @@ export async function POST(request) {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${seedanceApiKey}`
             },
-            body: JSON.stringify(seedancePayload),
+            body: JSON.stringify(payload),
             signal: controller.signal,
           });
         } else {
@@ -228,9 +277,9 @@ export async function POST(request) {
         if (apiResponse.ok) {
           try {
             const apiData = JSON.parse(responseText)
-            if (isSeedance) {
+            if (isSeedance || isGrok) {
               if (apiData.code !== 200) {
-                 throw new Error(apiData.msg || 'Erro na API Seedance')
+                 throw new Error(apiData.msg || `Erro na API ${modelName}`)
               }
               externalId = apiData.data?.taskId
             } else {

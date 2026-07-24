@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
+import { createClient } from '@/lib/supabase/client'
 import { PLANS } from '@/lib/plans-meta'
 import PlansModal from '@/components/PlansModal'
 import { Video, Sparkles, Coins, AlertTriangle, ArrowRight, Loader2, UploadCloud, X, Image as ImageIcon } from 'lucide-react'
@@ -17,6 +18,7 @@ export default function GenerateVideoPage() {
   const [loading, setLoading] = useState(false)
   const isGeneratingRef = useRef(false)
   const [refImage, setRefImage] = useState(null)
+  const [refFile, setRefFile] = useState(null)
   const [error, setError] = useState(null)
   const [plansModalOpen, setPlansModalOpen] = useState(false)
   const router = useRouter()
@@ -36,13 +38,11 @@ export default function GenerateVideoPage() {
     if (resolution === '720p') {
       if (String(duration) === '6') videoCost = 80;
       else if (String(duration) === '10') videoCost = 105;
-      else if (String(duration) === '15') videoCost = 130;
       else videoCost = 80;
     } else {
       // 480p
       if (String(duration) === '6') videoCost = 55;
       else if (String(duration) === '10') videoCost = 80;
-      else if (String(duration) === '15') videoCost = 105;
       else videoCost = 55;
     }
   }
@@ -61,6 +61,7 @@ export default function GenerateVideoPage() {
     const reader = new FileReader()
     reader.onloadend = () => {
       setRefImage(reader.result)
+      setRefFile(file)
     }
     reader.readAsDataURL(file)
   }
@@ -78,6 +79,7 @@ export default function GenerateVideoPage() {
         const reader = new FileReader()
         reader.onloadend = () => {
           setRefImage(reader.result)
+          setRefFile(file)
         }
         reader.readAsDataURL(file)
         break // Stop after first image paste
@@ -103,6 +105,31 @@ export default function GenerateVideoPage() {
     setError(null)
 
     try {
+      let finalRefImage = null;
+
+      if (refFile) {
+        const supabase = createClient()
+        const ext = refFile.name ? refFile.name.split('.').pop() : 'png'
+        const uniqueName = `client-upload-${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`
+        
+        const { error: uploadError } = await supabase.storage
+          .from('media')
+          .upload(uniqueName, refFile, {
+            cacheControl: '31536000',
+            upsert: false
+          })
+          
+        if (uploadError) {
+          throw new Error('Falha ao enviar a imagem de referência para o servidor.')
+        }
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('media')
+          .getPublicUrl(uniqueName)
+          
+        finalRefImage = publicUrl
+      }
+
       const response = await fetch('/api/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -112,7 +139,7 @@ export default function GenerateVideoPage() {
           aspect_ratio: aspectRatio,
           resolution,
           duration,
-          ref_image: refImage,
+          ref_image: finalRefImage,
         }),
       })
 
@@ -205,7 +232,7 @@ export default function GenerateVideoPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setRefImage(null)}
+                    onClick={() => { setRefImage(null); setRefFile(null); }}
                     className="p-1.5 rounded-small hover:bg-zinc-800 text-zinc-400 hover:text-white transition-all cursor-pointer"
                   >
                     <X className="h-4 w-4" />
@@ -319,7 +346,6 @@ export default function GenerateVideoPage() {
                     <>
                       <option value="6">6 segundos</option>
                       <option value="10">10 segundos</option>
-                      <option value="15">15 segundos</option>
                     </>
                   ) : (
                     <>
