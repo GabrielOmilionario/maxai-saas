@@ -104,20 +104,139 @@ export async function POST(request) {
     }
 
     // 4. Trigger external generation
+    const apiKey = process.env.GEMINIGEN_API_KEY
     const seedanceApiKey = process.env.KIE_API_KEY
     const modelName = model || 'grok-3'
     const isSeedance = modelName.toLowerCase().includes('seedance')
     const isGrok = modelName.toLowerCase().includes('grok')
     const isVeo = modelName.toLowerCase().includes('veo')
     const isExtend = !!extendVideoId
-    
-    console.log(`[GENERATE-VIDEO] isSeedance=${isSeedance}, isGrok=${isGrok}, isVeo=${isVeo}, isExtend=${isExtend}`)
+    let endpoint = 'https://api.snapgen.ai/uapi/v1/video-gen/grok';
+    if (isExtend) {
+      endpoint = isVeo ? 'https://api.snapgen.ai/uapi/v1/video-extend/veo' : 'https://api.snapgen.ai/uapi/v1/video-extend/grok';
+    } else {
+      endpoint = isVeo ? 'https://api.snapgen.ai/uapi/v1/video-gen/veo' : 'https://api.snapgen.ai/uapi/v1/video-gen/grok';
+    }
+
+    console.log(`[GENERATE-VIDEO] Endpoint: ${endpoint}, isSeedance=${isSeedance}, isGrok=${isGrok}, isVeo=${isVeo}, isExtend=${isExtend}`)
 
     let externalId = null
     let status = 'processing'
     let isMock = false
     let apiErrorMsg = null
 
+    const isSeedanceOrGrok = isSeedance || isGrok;
+
+    if (isSeedanceOrGrok && !seedanceApiKey) {
+      if (!isAdminUser) {
+        await supabaseAdmin.from('profiles').update({ credit_used: profile.credit_used }).eq('id', user.id)
+      }
+      return NextResponse.json({ error: 'Erro: A chave de API (KIE_API_KEY) não está configurada no servidor.' }, { status: 500 })
+    } else if (!isSeedanceOrGrok && !apiKey) {
+      if (!isAdminUser) {
+        await supabaseAdmin.from('profiles').update({ credit_used: profile.credit_used }).eq('id', user.id)
+      }
+      return NextResponse.json({ error: 'Erro: A chave de API (GEMINIGEN_API_KEY) não está configurada no servidor.' }, { status: 500 })
+    } else {
+      try {
+        let apiResponse;
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 55000)
+
+        if (isSeedance || isGrok) {
+          const callBackUrl = process.env.NEXT_PUBLIC_SITE_URL 
+            ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook/video`
+            : `https://${request.headers.get('host')}/api/webhook/video`;
+
+          let mappedAspectRatio = aspect_ratio || '16:9';
+          if (mappedAspectRatio === 'landscape') mappedAspectRatio = '16:9';
+          else if (mappedAspectRatio === 'portrait') mappedAspectRatio = '9:16';
+          else if (mappedAspectRatio === 'square') mappedAspectRatio = '1:1';
+          else if (mappedAspectRatio === 'vertical') mappedAspectRatio = '2:3';
+          else if (mappedAspectRatio === 'horizontal') mappedAspectRatio = '3:2';
+
+          let payload = {};
+
+          if (isSeedance) {
+            payload = {
+              model: "bytedance/seedance-2-fast",
+              callBackUrl: callBackUrl,
+              input: {
+                prompt: prompt,
+                resolution: resolution || '720p',
+                aspect_ratio: mappedAspectRatio,
+                duration: parseInt(duration) || 5,
+              }
+            };
+            if (uploadedRefImageUrl) {
+              payload.input.first_frame_url = uploadedRefImageUrl;
+            }
+          } else if (isGrok) {
+            if (isExtend) {
+              const actualExtendId = extendVideoId.includes('|id:') ? extendVideoId.split('|id:')[1] : extendVideoId;
+              payload = {
+                model: "grok-imagine/extend",
+                callBackUrl: callBackUrl,
+                input: {
+                  task_id: actualExtendId,
+                  prompt: prompt,
+                  extend_at: 2,
+                  extend_times: parseInt(duration) || 6,
+                }
+              };
+            } else if (uploadedRefImageUrl) {
+              payload = {
+                model: "grok-imagine/image-to-video",
+                callBackUrl: callBackUrl,
+                input: {
+                  image_urls: [uploadedRefImageUrl],
+                  prompt: prompt,
+                  mode: "normal",
+                  resolution: resolution || '480p',
+                  aspect_ratio: mappedAspectRatio,
+                  duration: parseInt(duration) || 6,
+                }
+              };
+            } else {
+              payload = {
+                model: "grok-imagine/text-to-video",
+                callBackUrl: callBackUrl,
+                input: {
+                  prompt: prompt,
+                  mode: "normal",
+                  resolution: resolution || '480p',
+                  aspect_ratio: mappedAspectRatio,
+                  duration: parseInt(duration) || 6,
+                }
+              };
+            }
+          }
+
+          console.log(`[GENERATE-VIDEO] Sending Request to Kie API (${modelName})`);
+
+          apiResponse = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${seedanceApiKey}`
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+          });
+        } else {
+          const formData = new FormData()
+          formData.append('prompt', prompt)
+          
+          if (isExtend) {
+            const actualExtendId = extendVideoId.includes('|id:') ? extendVideoId.split('|id:')[1] : extendVideoId;
+            formData.append('ref_history', actualExtendId)
+            console.log(`[GENERATE-VIDEO] Sending FormData (EXTEND): ref_history=${actualExtendId}`)
+          } else {
+            let mappedAspectRatio = aspect_ratio || 'landscape';
+            if (isVeo) {
+              if (mappedAspectRatio === 'landscape') mappedAspectRatio = '16:9';
+              else if (mappedAspectRatio === 'portrait' || mappedAspectRatio === 'vertical') mappedAspectRatio = '9:16';
+              else if (mappedAspectRatio === 'square') mappedAspectRatio = '1:1';
               else if (mappedAspectRatio !== '9:16' && mappedAspectRatio !== '16:9') mappedAspectRatio = '16:9';
             }
 
