@@ -127,6 +127,35 @@ export default function AdminPage() {
     }
   }
 
+  // Reset credits handler
+  const handleResetCredits = async (userId, userName) => {
+    if (!window.confirm(`Tem certeza que deseja zerar os créditos usados do usuário ${userName || 'Usuário'}?`)) return
+    
+    setError(null)
+    setSuccess(null)
+    
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'resetCredits',
+          userId: userId
+        })
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        setSuccess(`Créditos do usuário ${userName || 'Usuário'} zerados com sucesso!`)
+        fetchUsers()
+      } else {
+        setError(data.error || 'Falha ao zerar créditos.')
+      }
+    } catch (err) {
+      setError('Erro de conexão ao zerar créditos.')
+    }
+  }
+
   // Plan update handler
   const handleUpdatePlan = async (e) => {
     e.preventDefault()
@@ -565,6 +594,16 @@ export default function AdminPage() {
                           >
                             <KeyRound className="w-4 h-4 text-white/70" />
                             Senha
+                          </button>
+
+                          <button
+                            onClick={() => handleResetCredits(u.id, u.name)}
+                            disabled={isUserAdmin}
+                            className="h-[36px] px-3 bg-white/5 hover:bg-white/10 text-white font-medium text-[13px] rounded-[12px] transition-colors cursor-pointer flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Zerar Créditos"
+                          >
+                            <RefreshCw className="w-4 h-4 text-white/70" />
+                            Zerar
                           </button>
 
                           <button

@@ -175,6 +175,20 @@ export async function POST(request) {
       return NextResponse.json({ success: true, message: 'Senha redefinida com sucesso!' })
     }
 
+    if (action === 'resetCredits') {
+      const { error } = await supabaseAdmin
+        .from('profiles')
+        .update({ credit_used: 0 })
+        .eq('id', userId)
+
+      if (error) {
+        console.error('[ADMIN-USERS-POST] Reset credits error:', error.message)
+        return NextResponse.json({ error: 'Falha ao zerar créditos: ' + error.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ success: true, message: 'Créditos zerados com sucesso!' })
+    }
+
     return NextResponse.json({ error: 'Ação inválida' }, { status: 400 })
   } catch (err) {
     console.error('[ADMIN-USERS-POST] Fatal error:', err)
