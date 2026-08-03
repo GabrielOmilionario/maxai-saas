@@ -80,9 +80,9 @@ export async function POST(request) {
     }
 
     // 4. Trigger external generation
-    const apiKey = process.env.KIE_API_KEY
+    const apiKey = process.env.REAPI_API_KEY
     const hasRef = !!uploadedRefImageUrl
-    const modelName = hasRef ? 'gpt-image-2-image-to-image' : 'gpt-image-2-text-to-image'
+    const modelName = 'gpt-image-2'
     
     console.log(`[GENERATE-IMAGE] API Key present: ${!!apiKey}, modelName=${modelName}`)
 
@@ -98,23 +98,38 @@ export async function POST(request) {
       console.log(`[GENERATE-IMAGE] No API key — mock mode, externalId=${externalId}`)
     } else {
       try {
-        const payload = {
-          model: modelName,
-          input: {
-            prompt,
-            aspect_ratio: aspect_ratio || 'auto',
-            ...(hasRef && { input_urls: [uploadedRefImageUrl] })
+        let reapiSize = '1:1';
+        if (aspect_ratio) {
+          const validSizes = ['auto', '1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '5:4', '4:5', '2:1', '1:2', '21:9', '9:21'];
+          let mapped = aspect_ratio;
+          if (mapped === 'landscape') mapped = '16:9';
+          if (mapped === 'portrait' || mapped === 'vertical') mapped = '9:16';
+          if (mapped === 'square') mapped = '1:1';
+          if (mapped === 'horizontal') mapped = '3:2';
+          
+          if (validSizes.includes(mapped)) {
+            reapiSize = mapped;
+          } else {
+            reapiSize = 'auto';
           }
         }
 
+        const payload = {
+          model: "gpt-image-2",
+          prompt: prompt,
+          size: reapiSize,
+          resolution: "1k",
+          ...(hasRef && { image_urls: [uploadedRefImageUrl] })
+        }
+
         console.log("API iniciando")
-        console.log(`[GENERATE-IMAGE] Endpoint: https://api.kie.ai/api/v1/jobs/createTask`)
+        console.log(`[GENERATE-IMAGE] Endpoint: https://reapi.ai/api/v1/images/generations`)
         console.log(`[GENERATE-IMAGE] Payload:`, JSON.stringify(payload))
 
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 35000)
 
-        const apiResponse = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
+        const apiResponse = await fetch('https://reapi.ai/api/v1/images/generations', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
@@ -131,9 +146,7 @@ export async function POST(request) {
         if (apiResponse.ok) {
           try {
             const apiData = JSON.parse(responseText)
-            // KIE AI returns task details in data or at top level
-            const taskData = apiData.data || apiData
-            externalId = taskData.taskId || taskData.task_id
+            externalId = apiData.id;
             
             if (!externalId) {
               console.error('[GENERATE-IMAGE] Task ID missing in API response:', JSON.stringify(apiData))

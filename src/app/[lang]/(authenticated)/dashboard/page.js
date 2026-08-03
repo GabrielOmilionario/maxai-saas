@@ -49,15 +49,15 @@ const MaxLogo = ({ size = 32 }) => (
 
 /* ──────────────── MODEL CONFIG ──────────────── */
 const MODELS = [
+  { key: 'gpt-5.1-codex', label: 'GPT-5.1 Codex', icon: Code2, accent: 'blue', type: 'text' },
   { key: 'grok-3', label: 'Grok - Vídeo', icon: Video, accent: 'purple', type: 'video' },
   { key: 'veo-3.1-fast', label: 'Veo 3.1 Fast', icon: Video, accent: 'green', type: 'video' },
   { key: 'veo-3.1-lite', label: 'Veo 3.1 Lite', icon: Video, accent: 'teal', type: 'video' },
-  { key: 'gpt-image', label: 'GPT Image-2', icon: Paintbrush, accent: 'blue', type: 'image' },
   { key: 'seedance-2', label: 'Seedance 2.0', icon: Video, accent: 'indigo', type: 'video' },
 ]
 
 const QUICK_ACTIONS = [
-  { model: 'gpt-image', text: 'Criar Imagem', icon: ImageIcon, prompt: 'Crie uma imagem de um dragão futurista voando entre prédios cyberpunk', isPro: false, accentColor: '#A78BFA' },
+  { model: 'gpt-image', text: 'Criar Imagem (25 créditos)', icon: ImageIcon, prompt: 'Crie uma imagem de um dragão futurista voando entre prédios cyberpunk', isPro: false, accentColor: '#3B82F6' },
   { model: 'grok-3', text: 'Vídeo com IA', icon: Video, prompt: 'Crie um vídeo cinematográfico de um astronauta andando na lua de Marte', isPro: false, accentColor: '#A78BFA' },
 ]
 
@@ -71,7 +71,7 @@ function DashboardContent() {
 
   const [messages, setMessages] = useState([])
   const [prompt, setPrompt] = useState('')
-  const [activeModel, setActiveModel] = useState('grok-3')
+  const [activeModel, setActiveModel] = useState('gpt-5.1-codex')
   const [plansModalOpen, setPlansModalOpen] = useState(false)
   const [attachments, setAttachments] = useState([])
   const [loading, setLoading] = useState(false)
@@ -89,6 +89,7 @@ function DashboardContent() {
   // Video extension states
   const [extendModalOpen, setExtendModalOpen] = useState(false)
   const [extendVideoId, setExtendVideoId] = useState(null)
+  const [extendModelName, setExtendModelName] = useState(null)
   const [extendPrompt, setExtendPrompt] = useState('')
   const [extending, setExtending] = useState(false)
 
@@ -281,8 +282,10 @@ function DashboardContent() {
     setError(null)
     const promptToSend = `Estender vídeo: ${extendPrompt}`
     const extendVideoIdToSend = extendVideoId
+    const extendModelToSend = extendModelName || activeModel
     setExtendPrompt('')
     setExtendVideoId(null)
+    setExtendModelName(null)
     setExtendModalOpen(false)
 
     try {
@@ -303,7 +306,7 @@ function DashboardContent() {
           role: 'assistant',
           text: '',
           status: 'processing',
-          model_name: 'grok-3',
+          model_name: extendModelToSend,
           created_at: new Date().toISOString(),
         },
       ])
@@ -314,7 +317,7 @@ function DashboardContent() {
         body: JSON.stringify({
           sessionId: currentSessionId,
           text: promptToSend,
-          model: 'grok-3',
+          model: extendModelToSend,
           attachments: [],
           extendVideoId: extendVideoIdToSend,
         }),
@@ -488,7 +491,7 @@ function DashboardContent() {
     return <Video className="w-3.5 h-3.5" />
   }
 
-  const isVideoModel = activeModel !== 'gpt-image'
+  const isVideoModel = MODELS.find(m => m.key === activeModel)?.type === 'video'
   const isAdmin = profile?.email === 'gabrieljesus2030@gmail.com'
   const remainingCredits = isAdmin ? '∞' : (profile ? (profile.credit_limit - profile.credit_used) : 100)
   const isWelcome = !activeSessionId && messages.length === 0
@@ -519,6 +522,8 @@ function DashboardContent() {
         if (dur === '15') return 105
         return 55
       }
+    } else if (activeModel === 'gpt-5.1-codex') {
+      return 'Variável'
     } else {
       return 25
     }
@@ -941,7 +946,11 @@ function DashboardContent() {
         style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontWeight: '500' }}
       >
         <Coins className="w-3.5 h-3.5" style={{ color: '#A78BFA' }} />
-        <span>Esta geração custará <strong style={{ color: '#A78BFA' }}>{estimatedCost}</strong> créditos</span>
+        <span>
+          {estimatedCost === 'Variável' 
+            ? 'Custo variável baseado no tamanho do texto gerado.' 
+            : <>Esta geração custará <strong style={{ color: '#A78BFA' }}>{estimatedCost}</strong> créditos</>}
+        </span>
       </div>
 
       {/* Disclaimer */}
@@ -1372,22 +1381,35 @@ function DashboardContent() {
                               </div>
                             </div>
                           ) : (
-                            /* Success: media + actions */
-                            <div className="space-y-3">
-                              <div
-                                className="overflow-hidden"
-                                style={{
+                            /* Success: media + actions or text */
+                            <div className="space-y-3 w-full">
+                              {msg.text && !msg.media_url ? (
+                                <div className="chat-bubble-assistant whitespace-pre-wrap" style={{ 
+                                  background: 'rgba(255,255,255,0.03)',
+                                  border: '1px solid rgba(255,255,255,0.06)',
                                   borderRadius: '16px',
-                                  border: '1px solid rgba(255,255,255,0.07)',
-                                  ...getMediaStyle(msg.id),
-                                  background: 'rgba(0,0,0,0.2)',
-                                  padding: '6px',
-                                  display: 'flex',
-                                  justifyContent: 'center',
-                                  alignItems: 'center',
-                                }}
-                              >
-                                {msg.media_type === 'video' ? (
+                                  padding: '16px 20px',
+                                  color: 'rgba(255,255,255,0.9)',
+                                  fontSize: '14px',
+                                  lineHeight: '1.6'
+                                }}>
+                                  {msg.text}
+                                </div>
+                              ) : (
+                                <div
+                                  className="overflow-hidden"
+                                  style={{
+                                    borderRadius: '16px',
+                                    border: '1px solid rgba(255,255,255,0.07)',
+                                    ...getMediaStyle(msg.id),
+                                    background: 'rgba(0,0,0,0.2)',
+                                    padding: '6px',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                  }}
+                                >
+                                  {msg.media_type === 'video' ? (
                                   <video
                                     src={msg.media_url}
                                     controls
@@ -1426,6 +1448,7 @@ function DashboardContent() {
                                   />
                                 )}
                               </div>
+                              )}
 
                               {/* Action bar */}
                               <div className="flex items-center gap-1">
@@ -1447,13 +1470,15 @@ function DashboardContent() {
                                     },
                                   ]
 
-                                  if (msg.media_type === 'video' && msg.external_id) {
+                                  const isGrok = msg.model_name?.toLowerCase().includes('grok');
+                                  if (msg.media_type === 'video' && msg.external_id && !isGrok) {
                                     actions.push({
                                       title: 'Estender Vídeo',
                                       icon: Sparkles,
                                       color: '#A78BFA',
                                       onClick: () => {
                                         setExtendVideoId(msg.external_id)
+                                        setExtendModelName(msg.model_name)
                                         setExtendModalOpen(true)
                                       }
                                     })
@@ -1551,14 +1576,14 @@ function DashboardContent() {
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Sparkles className="w-5 h-5" style={{ color: '#A78BFA' }} /> Estender Vídeo com Grok-3
+                  <Sparkles className="w-5 h-5" style={{ color: '#A78BFA' }} /> Estender Vídeo com {extendModelName ? getModelLabel(extendModelName) : 'Veo 3'}
                 </h3>
                 <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px', marginTop: '4px', lineHeight: '1.6' }}>
                   Continue a história deste vídeo adicionando um novo prompt.
                 </p>
               </div>
               <button
-                onClick={() => { setExtendModalOpen(false); setExtendVideoId(null); }}
+                onClick={() => { setExtendModalOpen(false); setExtendVideoId(null); setExtendModelName(null); }}
                 className="cursor-pointer"
                 style={{
                   padding: '6px',
@@ -1614,13 +1639,15 @@ function DashboardContent() {
                 }}
               >
                 <span>Custo da extensão:</span>
-                <span style={{ fontWeight: '700', color: '#A78BFA' }}>20 créditos</span>
+                <span style={{ fontWeight: '700', color: '#A78BFA' }}>
+                  {extendModelName?.toLowerCase().includes('veo') ? '18' : '20'} créditos
+                </span>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-1">
                 <button
                   type="button"
-                  onClick={() => { setExtendModalOpen(false); setExtendVideoId(null); }}
+                  onClick={() => { setExtendModalOpen(false); setExtendVideoId(null); setExtendModelName(null); }}
                   className="cursor-pointer font-semibold flex items-center justify-center"
                   style={{
                     height: '42px',

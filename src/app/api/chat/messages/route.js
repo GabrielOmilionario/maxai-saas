@@ -102,18 +102,20 @@ export async function GET(request) {
           } else {
             const isGeminiGenVideo = msg.model_name?.includes('grok') || msg.model_name?.includes('veo')
             if (isGeminiGenVideo) {
-              // Video generation status check (GeminiGen.ai)
-              const apiKey = process.env.GEMINIGEN_API_KEY
+              // Video generation status check
+              const isGrok = msg.model_name?.includes('grok')
+              const isVeo = msg.model_name?.includes('veo')
+              const apiKey = isGrok ? process.env.REAPI_API_KEY : process.env.GEMINIGEN_API_KEY
               if (apiKey && msg.external_id) {
                 const costMatch = msg.external_id.match(/cost:(\d+)/);
                 const refundAmount = costMatch ? parseInt(costMatch[1]) : 20;
                 const realExternalId = msg.external_id.includes('|id:') ? msg.external_id.split('|id:')[1] : msg.external_id;
 
-                const pollUrl = `https://api.snapgen.ai/uapi/v1/history/${realExternalId}`
+                const pollUrl = isGrok ? `https://reapi.ai/api/v1/tasks/${realExternalId}` : `https://api.snapgen.ai/uapi/v1/history/${realExternalId}`;
                 console.log(`[POLL-VIDEO] Checking status at: ${pollUrl}`)
 
                 const res = await fetch(pollUrl, {
-                  headers: { 'x-api-key': apiKey },
+                  headers: isGrok ? { 'Authorization': `Bearer ${apiKey}` } : { 'x-api-key': apiKey },
                 })
 
                 const resText = await res.text()
@@ -128,11 +130,16 @@ export async function GET(request) {
                     continue
                   }
 
-                  const taskData = data.data || data
+                  const taskData = isGrok ? data : (data.data || data)
                   const statusVal = taskData.status
-                  let videoUrlVal = taskData.video_url || taskData.url || taskData.result_url || taskData.result
-                  if (!videoUrlVal && taskData.generated_video && taskData.generated_video.length > 0) {
-                    videoUrlVal = taskData.generated_video[0].video_url || taskData.generated_video[0].url
+                  let videoUrlVal = null
+                  if (isGrok) {
+                    videoUrlVal = taskData.output?.video_urls?.[0];
+                  } else {
+                    videoUrlVal = taskData.video_url || taskData.url || taskData.result_url || taskData.result
+                    if (!videoUrlVal && taskData.generated_video && taskData.generated_video.length > 0) {
+                      videoUrlVal = taskData.generated_video[0].video_url || taskData.generated_video[0].url
+                    }
                   }
 
                   console.log(`[POLL-VIDEO] Generation status=${statusVal} for external_id=${msg.external_id}`)
@@ -207,14 +214,15 @@ export async function GET(request) {
                 console.warn(`[POLL-VIDEO] Skipping - apiKey=${!!apiKey}, external_id=${msg.external_id}`)
               }
             } else {
-              // Image generation status check (KIE AI)
-              const apiKey = process.env.KIE_API_KEY
+              // Image generation status check
+              const isReapiImage = msg.model_name?.includes('gpt-image-2')
+              const apiKey = isReapiImage ? process.env.REAPI_API_KEY : process.env.KIE_API_KEY
               if (apiKey && msg.external_id) {
                 const costMatch = msg.external_id.match(/cost:(\d+)/);
                 const refundAmount = costMatch ? parseInt(costMatch[1]) : 20;
                 const realExternalId = msg.external_id.includes('|id:') ? msg.external_id.split('|id:')[1] : msg.external_id;
 
-                const pollUrl = `https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${realExternalId}`
+                const pollUrl = isReapiImage ? `https://reapi.ai/api/v1/tasks/${realExternalId}` : `https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${realExternalId}`
                 console.log(`[POLL-IMAGE] Checking status at: ${pollUrl}`)
 
                 const res = await fetch(pollUrl, {
@@ -233,11 +241,17 @@ export async function GET(request) {
                     continue
                   }
 
-                  const taskData = apiRes.data || apiRes
-                  console.log(`[POLL-IMAGE] Task state=${taskData.state} for external_id=${msg.external_id}`)
+                  const taskData = isReapiImage ? apiRes : (apiRes.data || apiRes)
+                  const taskState = isReapiImage ? taskData.status : taskData.state
+                  console.log(`[POLL-IMAGE] Task state=${taskState} for external_id=${msg.external_id}`)
                   
-                  if (taskData.state === 'success') {
+                  const isSuccess = isReapiImage ? taskState === 'completed' : taskState === 'success'
+                  const isFail = isReapiImage ? taskState === 'failed' : taskState === 'fail'
+
+                  if (isSuccess) {
                     const getResultUrl = (td) => {
+                      if (isReapiImage) return td.output?.image_urls?.[0] || null;
+                      
                       if (td.resultUrls && td.resultUrls.length > 0) return td.resultUrls[0]
                       if (td.result?.resultUrls && td.result.resultUrls.length > 0) return td.result.resultUrls[0]
                       if (td.resultJson) {
@@ -284,12 +298,12 @@ export async function GET(request) {
                     } else {
                       console.warn(`[POLL-IMAGE] Task succeeded but no result URL found in response`)
                     }
-                  } else if (taskData.state === 'fail') {
+                  } else if (isFail) {
                     console.warn(`[POLL-IMAGE] Generation FAILED for external_id=${msg.external_id}`)
                     // Fail and refund 20 credits
                     await supabaseAdmin
                       .from('chat_messages')
-                      .update({ status: 'failed', error_msg: taskData.message || 'A geração da imagem falhou.' })
+                      .update({ status: 'failed', error_msg: taskData.error?.message || taskData.message || 'A geração da imagem falhou.' })
                       .eq('id', msg.id)
 
                     const { data: profile } = await supabaseAdmin
@@ -349,10 +363,13 @@ export async function POST(request) {
       return NextResponse.json({ error: 'sessionId e prompt são obrigatórios' }, { status: 400 })
     }
 
-    const modelName = model || 'grok-3'
+    const modelName = model || 'gpt-5.1-codex'
     const isVideo = modelName.includes('grok') || modelName.includes('veo') || modelName.includes('seedance')
+    const isTextModel = modelName.includes('gpt-5.1-codex')
     let cost = 25 // default for image (GPT Image-2)
-    if (isVideo) {
+    if (isTextModel) {
+      cost = 2 // Minimum required for text
+    } else if (isVideo) {
       if (modelName.includes('seedance')) {
         const durationSeconds = Number(duration) || 5;
         const hasImage = attachments && attachments.length > 0;
@@ -402,8 +419,8 @@ export async function POST(request) {
       )
     }
 
-    // 2. Deduct credits
-    if (!isAdminUser) {
+    // 2. Deduct credits (Only for video/image initially, text models deduct after generation)
+    if (!isAdminUser && !isTextModel) {
       const { error: deductError } = await supabaseAdmin
         .from('profiles')
         .update({ credit_used: profile.credit_used + cost })
@@ -465,29 +482,164 @@ export async function POST(request) {
     let isMock = false
     let apiErrorMsg = null
 
-    if (modelName.includes('grok') || modelName.includes('veo')) {
-      // Call GeminiGen.ai Video API
-      const apiKey = process.env.GEMINIGEN_API_KEY
-      const isVeo = modelName.includes('veo')
-      const isExtend = !!extendVideoId
-      let endpoint
-      if (isExtend) {
-        endpoint = isVeo ? 'https://api.snapgen.ai/uapi/v1/video-extend/veo' : 'https://api.snapgen.ai/uapi/v1/video-extend/grok'
-      } else {
-        endpoint = isVeo ? 'https://api.snapgen.ai/uapi/v1/video-gen/veo' : 'https://api.snapgen.ai/uapi/v1/video-gen/grok'
+    if (isTextModel) {
+      // Call Text API
+      const apiKey = process.env.KIE_API_KEY
+      if (!apiKey) {
+        return NextResponse.json({ error: 'Erro: API Key do KIE não configurada.' }, { status: 500 })
       }
 
-      console.log(`[VIDEO-GEN] Endpoint: ${endpoint}, isVeo=${isVeo}, isExtend=${isExtend}`)
+      let generatedText = ''
+      let finalCost = 0
+      let usageData = null
+      
+      try {
+        const payload = {
+          model: modelName,
+          stream: false,
+          input: [
+            ...messages.map(m => ({
+              role: m.role,
+              content: [{ type: 'input_text', text: m.text }]
+            })),
+            {
+              role: 'user',
+              content: [
+                { type: 'input_text', text: text },
+                ...(processedAttachments || []).map(att => ({ type: 'input_image', image_url: att }))
+              ]
+            }
+          ]
+        }
+
+        const endpointUrl = 'https://api.kie.ai/api/v1/responses'
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 60000)
+
+        const apiRes = await fetch(endpointUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        })
+        clearTimeout(timeoutId)
+
+        const responseTextData = await apiRes.text()
+        if (apiRes.ok) {
+          const data = JSON.parse(responseTextData)
+          
+          if (data && data.output) {
+            const msgObj = data.output.find(o => o.type === 'message' && o.role === 'assistant')
+            if (msgObj && msgObj.content) {
+               generatedText = msgObj.content.map(c => c.text).join('')
+            }
+          }
+          if (data && data.usage) {
+            usageData = data.usage
+            const inTokens = usageData.input_tokens || 0
+            const outTokens = usageData.output_tokens || 0
+            finalCost = (inTokens / 1000 * 0.1) + (outTokens / 1000 * 0.8)
+          }
+
+          console.log(`[TEXT-GEN] Success! usage=${JSON.stringify(usageData)}, finalCost=${finalCost}`)
+          
+          if (!isAdminUser && finalCost > 0) {
+            await supabaseAdmin.from('profiles').update({ credit_used: profile.credit_used + finalCost }).eq('id', user.id)
+          }
+        } else {
+          console.error(`[TEXT-GEN] API error: status=${apiRes.status}, body=${responseTextData.substring(0, 300)}`)
+          return NextResponse.json({ error: `Erro na API de texto (${apiRes.status})` }, { status: apiRes.status })
+        }
+      } catch (err) {
+        console.error(`[TEXT-GEN] Request error:`, err.message)
+        return NextResponse.json({ error: `Erro na comunicação com a API de texto: ${err.message}` }, { status: 500 })
+      }
+
+      // Save Completed Assistant Message
+      const assistantMsgId = 'msg-' + crypto.randomBytes(8).toString('hex')
+      const { data: assistantMsg, error: aMsgError } = await supabaseAdmin
+        .from('chat_messages')
+        .insert({
+          id: assistantMsgId,
+          session_id: sessionId,
+          user_id: user.id,
+          role: 'assistant',
+          text: generatedText,
+          status: 'completed',
+          model_name: modelName,
+          cost: finalCost
+        })
+        .select()
+        .single()
+
+      if (aMsgError) console.error('[MESSAGES-POST] Assistant msg error:', aMsgError)
+      
+      return NextResponse.json({ userMsg, assistantMsg, isMock: false, apiError: null })
+    }
+
+    if (modelName.includes('grok') || modelName.includes('veo')) {
+      // Call Video API
+      const isGrok = modelName.includes('grok')
+      const isVeo = modelName.includes('veo')
+      const apiKey = isGrok ? process.env.REAPI_API_KEY : process.env.GEMINIGEN_API_KEY
+      const isExtend = !!extendVideoId
+      
+      let endpoint
+      if (isGrok) {
+        endpoint = 'https://reapi.ai/api/v1/videos/generations'
+      } else if (isExtend) {
+        endpoint = 'https://api.snapgen.ai/uapi/v1/video-extend/veo'
+      } else {
+        endpoint = 'https://api.snapgen.ai/uapi/v1/video-gen/veo'
+      }
+
+      console.log(`[VIDEO-GEN] Endpoint: ${endpoint}, isVeo=${isVeo}, isGrok=${isGrok}, isExtend=${isExtend}`)
       console.log(`[VIDEO-GEN] API Key present: ${!!apiKey}`)
 
       if (!apiKey) {
         if (!isAdminUser) {
           await supabaseAdmin.from('profiles').update({ credit_used: profile.credit_used }).eq('id', user.id)
         }
-        return NextResponse.json({ error: 'Erro: A chave de API (GEMINIGEN_API_KEY) não está configurada no servidor.' }, { status: 500 })
+        const missingKey = isGrok ? 'REAPI_API_KEY' : 'GEMINIGEN_API_KEY'
+        return NextResponse.json({ error: `Erro: A chave de API (${missingKey}) não está configurada no servidor.` }, { status: 500 })
       } else {
         try {
-          const formData = new FormData()
+          let reqBody;
+          let reqHeaders;
+          let formData;
+          
+          if (isGrok) {
+            if (isExtend) {
+              return NextResponse.json({ error: 'Extensão de vídeo não é suportada para o modelo Grok.' }, { status: 400 })
+            }
+            
+            let reapiSize = '16:9';
+            if (aspectRatio === '9:16' || aspectRatio === 'vertical' || aspectRatio === 'portrait') reapiSize = '9:16';
+            else if (aspectRatio === '1:1' || aspectRatio === 'square') reapiSize = '1:1';
+            else if (aspectRatio === '3:2' || aspectRatio === 'horizontal') reapiSize = '3:2';
+            else if (aspectRatio === '2:3') reapiSize = '2:3';
+
+            reqHeaders = {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            };
+            
+            const payload = {
+              model: "grok-imagine-1.0-video",
+              prompt: text,
+              size: reapiSize,
+              duration: parseInt(duration) || 6,
+              quality: resolution === '720p' ? '720p' : '480p'
+            };
+            if (processedAttachments && processedAttachments.length > 0) {
+              payload.image_urls = [processedAttachments[0]];
+            }
+            reqBody = JSON.stringify(payload);
+          } else {
+          formData = new FormData()
           formData.append('prompt', text)
           
           if (isExtend) {
@@ -522,13 +674,15 @@ export async function POST(request) {
             console.log(`[VIDEO-GEN] Payload: prompt="${text.substring(0, 50)}...", model=${modelName}, resolution=${resolution || (isVeo ? '720p' : '480p')}, aspect_ratio=${mappedAspectRatio}, duration=${duration || (isVeo ? '6' : '10')}, hasRefImage=${processedAttachments.length > 0}`)
           }
 
+          } // end isVeo else
+
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), 45000)
 
           const apiRes = await fetch(endpoint, {
             method: 'POST',
-            headers: { 'x-api-key': apiKey },
-            body: formData,
+            headers: isGrok ? reqHeaders : { 'x-api-key': apiKey },
+            body: isGrok ? reqBody : formData,
             signal: controller.signal
           })
           clearTimeout(timeoutId)
@@ -539,7 +693,7 @@ export async function POST(request) {
           if (apiRes.ok) {
             try {
               const data = JSON.parse(responseText)
-              externalId = data.uuid
+              externalId = isGrok ? data.id : data.uuid
               console.log(`[VIDEO-GEN] Success! externalId=${externalId}`)
             } catch (parseErr) {
               console.error(`[VIDEO-GEN] Failed to parse success response:`, parseErr.message)
@@ -569,8 +723,9 @@ export async function POST(request) {
         }
       }
     } else {
-      // Call KIE AI Image API
-      const apiKey = process.env.KIE_API_KEY
+      // Call Image API
+      const isReapiImage = modelName.includes('gpt-image-2')
+      const apiKey = isReapiImage ? process.env.REAPI_API_KEY : process.env.KIE_API_KEY
       console.log(`[IMAGE-GEN] API Key present: ${!!apiKey}`)
 
       if (!apiKey) {
@@ -593,6 +748,25 @@ export async function POST(request) {
                 ...(hasImage && { reference_image_urls: [processedAttachments[0]] })
               }
             }
+          } else if (isReapiImage) {
+            let reapiSize = '1:1';
+            if (aspectRatio) {
+              const validSizes = ['auto', '1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '5:4', '4:5', '2:1', '1:2', '21:9', '9:21'];
+              let mapped = aspectRatio;
+              if (mapped === 'landscape') mapped = '16:9';
+              if (mapped === 'portrait' || mapped === 'vertical') mapped = '9:16';
+              if (mapped === 'square') mapped = '1:1';
+              if (mapped === 'horizontal') mapped = '3:2';
+              if (validSizes.includes(mapped)) reapiSize = mapped;
+              else reapiSize = 'auto';
+            }
+            payload = {
+              model: "gpt-image-2",
+              prompt: text,
+              size: reapiSize,
+              resolution: "1k",
+              ...(hasImage && { image_urls: [processedAttachments[0]] })
+            }
           } else {
             payload = {
               model: hasImage ? 'gpt-image-2-image-to-image' : 'gpt-image-2-text-to-image',
@@ -604,13 +778,14 @@ export async function POST(request) {
             }
           }
 
-          console.log(`[IMAGE-GEN] Endpoint: https://api.kie.ai/api/v1/jobs/createTask`)
+          const endpointUrl = isReapiImage ? 'https://reapi.ai/api/v1/images/generations' : 'https://api.kie.ai/api/v1/jobs/createTask'
+          console.log(`[IMAGE-GEN] Endpoint: ${endpointUrl}`)
           console.log(`[IMAGE-GEN] Payload:`, JSON.stringify(payload))
 
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), 35000)
 
-          const apiRes = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
+          const apiRes = await fetch(endpointUrl, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${apiKey}`,
@@ -627,8 +802,12 @@ export async function POST(request) {
           if (apiRes.ok) {
             try {
               const data = JSON.parse(responseText)
-              const taskData = data.data || data
-              externalId = taskData.taskId || taskData.task_id
+              if (isReapiImage) {
+                externalId = data.id
+              } else {
+                const taskData = data.data || data
+                externalId = taskData.taskId || taskData.task_id
+              }
               console.log(`[IMAGE-GEN] Success! externalId=${externalId}`)
 
               if (!externalId) {

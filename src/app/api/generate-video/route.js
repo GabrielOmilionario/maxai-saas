@@ -106,6 +106,7 @@ export async function POST(request) {
     // 4. Trigger external generation
     const apiKey = process.env.GEMINIGEN_API_KEY
     const seedanceApiKey = process.env.KIE_API_KEY
+    const reapiApiKey = process.env.REAPI_API_KEY
     const modelName = model || 'grok-3'
     const isSeedance = modelName.toLowerCase().includes('seedance')
     const isGrok = modelName.toLowerCase().includes('grok')
@@ -127,11 +128,16 @@ export async function POST(request) {
 
     const isSeedanceOrGrok = isSeedance || isGrok;
 
-    if (isSeedanceOrGrok && !seedanceApiKey) {
+    if (isSeedance && !seedanceApiKey) {
       if (!isAdminUser) {
         await supabaseAdmin.from('profiles').update({ credit_used: profile.credit_used }).eq('id', user.id)
       }
       return NextResponse.json({ error: 'Erro: A chave de API (KIE_API_KEY) não está configurada no servidor.' }, { status: 500 })
+    } else if (isGrok && !reapiApiKey) {
+      if (!isAdminUser) {
+        await supabaseAdmin.from('profiles').update({ credit_used: profile.credit_used }).eq('id', user.id)
+      }
+      return NextResponse.json({ error: 'Erro: A chave de API (REAPI_API_KEY) não está configurada no servidor.' }, { status: 500 })
     } else if (!isSeedanceOrGrok && !apiKey) {
       if (!isAdminUser) {
         await supabaseAdmin.from('profiles').update({ credit_used: profile.credit_used }).eq('id', user.id)
@@ -171,58 +177,50 @@ export async function POST(request) {
             if (uploadedRefImageUrl) {
               payload.input.first_frame_url = uploadedRefImageUrl;
             }
+            console.log(`[GENERATE-VIDEO] Sending Request to Kie API (Seedance)`);
+            apiResponse = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${seedanceApiKey}`
+              },
+              body: JSON.stringify(payload),
+              signal: controller.signal,
+            });
           } else if (isGrok) {
             if (isExtend) {
-              const actualExtendId = extendVideoId.includes('|id:') ? extendVideoId.split('|id:')[1] : extendVideoId;
-              payload = {
-                model: "grok-imagine/extend",
-                callBackUrl: callBackUrl,
-                input: {
-                  task_id: actualExtendId,
-                  prompt: prompt,
-                  extend_at: 2,
-                  extend_times: parseInt(duration) || 6,
-                }
-              };
-            } else if (uploadedRefImageUrl) {
-              payload = {
-                model: "grok-imagine/image-to-video",
-                callBackUrl: callBackUrl,
-                input: {
-                  image_urls: [uploadedRefImageUrl],
-                  prompt: prompt,
-                  mode: "normal",
-                  resolution: resolution || '480p',
-                  aspect_ratio: mappedAspectRatio,
-                  duration: parseInt(duration) || 6,
-                }
-              };
-            } else {
-              payload = {
-                model: "grok-imagine/text-to-video",
-                callBackUrl: callBackUrl,
-                input: {
-                  prompt: prompt,
-                  mode: "normal",
-                  resolution: resolution || '480p',
-                  aspect_ratio: mappedAspectRatio,
-                  duration: parseInt(duration) || 6,
-                }
-              };
+              return NextResponse.json({ error: 'Extensão de vídeo não é suportada para o modelo Grok atualmente.' }, { status: 400 });
             }
+            
+            let reapiSize = '16:9';
+            if (mappedAspectRatio === '9:16' || mappedAspectRatio === 'vertical') reapiSize = '9:16';
+            else if (mappedAspectRatio === '1:1' || mappedAspectRatio === 'square') reapiSize = '1:1';
+            else if (mappedAspectRatio === '3:2' || mappedAspectRatio === 'horizontal') reapiSize = '3:2';
+            else if (mappedAspectRatio === '2:3') reapiSize = '2:3';
+
+            payload = {
+              model: "grok-imagine-1.0-video",
+              prompt: prompt,
+              size: reapiSize,
+              duration: parseInt(duration) || 6,
+              quality: resolution === '720p' ? '720p' : '480p'
+            };
+            
+            if (uploadedRefImageUrl) {
+              payload.image_urls = [uploadedRefImageUrl];
+            }
+
+            console.log(`[GENERATE-VIDEO] Sending Request to reapi.ai (Grok)`);
+            apiResponse = await fetch('https://reapi.ai/api/v1/videos/generations', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${reapiApiKey}`
+              },
+              body: JSON.stringify(payload),
+              signal: controller.signal,
+            });
           }
-
-          console.log(`[GENERATE-VIDEO] Sending Request to Kie API (${modelName})`);
-
-          apiResponse = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${seedanceApiKey}`
-            },
-            body: JSON.stringify(payload),
-            signal: controller.signal,
-          });
         } else {
           const formData = new FormData()
           formData.append('prompt', prompt)
@@ -278,10 +276,14 @@ export async function POST(request) {
           try {
             const apiData = JSON.parse(responseText)
             if (isSeedance || isGrok) {
-              if (apiData.code !== 200) {
-                 throw new Error(apiData.msg || `Erro na API ${modelName}`)
+              if (isGrok) {
+                externalId = apiData.id;
+              } else {
+                if (apiData.code !== 200) {
+                   throw new Error(apiData.msg || `Erro na API ${modelName}`)
+                }
+                externalId = apiData.data?.taskId
               }
-              externalId = apiData.data?.taskId
             } else {
               externalId = apiData.uuid
             }

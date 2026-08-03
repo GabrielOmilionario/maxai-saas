@@ -132,23 +132,30 @@ export async function GET(request) {
               }
             }
           } else if (gen.type === 'image') {
-            // Live Image Status Check (KIE AI)
-            const apiKey = process.env.KIE_API_KEY
+            // Live Image Status Check
+            const isReapiImage = gen.model_name?.includes('gpt-image-2')
+            const apiKey = isReapiImage ? process.env.REAPI_API_KEY : process.env.KIE_API_KEY
             if (apiKey && gen.external_id) {
               const costMatch = gen.external_id.match(/cost:(\d+)/);
               const refundAmount = costMatch ? parseInt(costMatch[1]) : 20;
               const realExternalId = gen.external_id.includes('|id:') ? gen.external_id.split('|id:')[1] : gen.external_id;
 
-              const res = await fetch(`https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${realExternalId}`, {
+              const pollUrl = isReapiImage ? `https://reapi.ai/api/v1/tasks/${realExternalId}` : `https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${realExternalId}`
+              const res = await fetch(pollUrl, {
                 headers: { 'Authorization': `Bearer ${apiKey}` },
               })
 
               if (res.ok) {
                 const apiRes = await res.json()
-                const taskData = apiRes.data || apiRes
+                const taskData = isReapiImage ? apiRes : (apiRes.data || apiRes)
+                const taskState = isReapiImage ? taskData.status : taskData.state
                 
-                if (taskData.state === 'success') {
+                const isSuccess = isReapiImage ? taskState === 'completed' : taskState === 'success'
+                const isFail = isReapiImage ? taskState === 'failed' : taskState === 'fail'
+
+                if (isSuccess) {
                   const getResultUrl = (td) => {
+                    if (isReapiImage) return td.output?.image_urls?.[0] || null;
                     if (td.resultUrls && td.resultUrls.length > 0) return td.resultUrls[0]
                     if (td.result?.resultUrls && td.result.resultUrls.length > 0) return td.result.resultUrls[0]
                     if (td.resultJson) {
@@ -164,15 +171,20 @@ export async function GET(request) {
                   if (finalUrl) {
                     // Archive to Supabase
                     finalUrl = await uploadRemoteUrlToSupabase(finalUrl, 'image')
+                    // Update DB with the file URL
                     await supabaseAdmin
                       .from('generations')
-                      .update({ status: 'completed', result_url: finalUrl })
+                      .update({
+                        status: 'completed',
+                        result_url: finalUrl
+                      })
                       .eq('id', gen.id)
 
                     gen.status = 'completed'
                     gen.result_url = finalUrl
                   }
-                } else if (taskData.state === 'fail') {
+                } else if (isFail) {
+                  console.log(`[GENERATIONS] Image failed for gen ${gen.id}`)
                   // Failed -> Update DB and refund 20 credits
                   await supabaseAdmin
                     .from('generations')
