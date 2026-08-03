@@ -673,6 +673,30 @@ function DashboardContent() {
                   <span>Fotos</span>
                 </button>
 
+                <button
+                  onClick={() => { setActiveModel('gpt-image'); setModelMenuOpen(false) }}
+                  className="flex items-center gap-3 w-full text-left cursor-pointer mt-1"
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: '#fff',
+                    transition: 'all 0.15s ease',
+                    background: 'rgba(124, 58, 237, 0.15)', // Light purple bg
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(124, 58, 237, 0.25)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(124, 58, 237, 0.15)' }}
+                >
+                  <div
+                    className="flex items-center justify-center shrink-0"
+                    style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(124, 58, 237, 0.2)' }}
+                  >
+                    <Sparkles className="w-4 h-4" style={{ color: '#A78BFA' }} />
+                  </div>
+                  <span>Criar Imagem</span>
+                </button>
+
                 {/* Grok Settings */}
                 {activeModel === 'grok-3' && (
                   <div
