@@ -569,7 +569,30 @@ function DashboardContent() {
      PROMPT INPUT
      ═══════════════════════════════════════════ */
   const renderPromptInput = (maxWidth = '900px') => (
-    <div className="desktop-input-pill" style={{ width: '100%', maxWidth, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+    <div style={{ width: '100%', maxWidth, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* Error Message Display */}
+      {error && (
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-xl animate-fade-in"
+          style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+          }}
+        >
+          <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: '#ef4444' }} />
+          <p style={{ fontSize: '13px', color: '#fca5a5', fontWeight: '500', lineHeight: '1.4' }}>
+            {error}
+          </p>
+          <button
+            onClick={() => setError(null)}
+            className="ml-auto p-1.5 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" style={{ color: '#fca5a5' }} />
+          </button>
+        </div>
+      )}
+
+      <div className="desktop-input-pill" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
       {/* Prompt pill */}
       <div className="chat-input-pill flex flex-col relative" style={{ padding: '10px 10px 10px 10px' }}>

@@ -500,13 +500,13 @@ export async function POST(request) {
           input: [
             ...messages.map(m => ({
               role: m.role,
-              content: [{ type: 'input_text', text: m.text }]
+              content: [{ type: 'text', text: m.text }]
             })),
             {
               role: 'user',
               content: [
-                { type: 'input_text', text: text },
-                ...(processedAttachments || []).map(att => ({ type: 'input_image', image_url: att }))
+                { type: 'text', text: text },
+                ...(processedAttachments || []).map(att => ({ type: 'image_url', image_url: { url: att } }))
               ]
             }
           ]
