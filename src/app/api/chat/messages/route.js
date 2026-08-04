@@ -363,9 +363,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'sessionId e prompt são obrigatórios' }, { status: 400 })
     }
 
-    const modelName = model || 'gpt-5.1-codex'
+    const modelName = model || 'gpt-5-6-luna'
     const isVideo = modelName.includes('grok') || modelName.includes('veo') || modelName.includes('seedance')
-    const isTextModel = modelName.includes('gpt-5.1-codex')
+    const isTextModel = modelName.includes('gpt-5-6-luna')
     let cost = 25 // default for image (GPT Image-2)
     if (isTextModel) {
       cost = 2 // Minimum required for text
@@ -500,13 +500,13 @@ export async function POST(request) {
           input: [
             ...messages.map(m => ({
               role: m.role,
-              content: [{ type: 'text', text: m.text }]
+              content: [{ type: 'input_text', text: m.text }]
             })),
             {
               role: 'user',
               content: [
-                { type: 'text', text: text },
-                ...(processedAttachments || []).map(att => ({ type: 'image_url', image_url: { url: att } }))
+                { type: 'input_text', text: text },
+                ...(processedAttachments || []).map(att => ({ type: 'input_image', image_url: att }))
               ]
             }
           ]
