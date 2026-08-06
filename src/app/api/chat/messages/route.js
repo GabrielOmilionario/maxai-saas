@@ -363,13 +363,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'sessionId e prompt são obrigatórios' }, { status: 400 })
     }
 
-    const modelName = model || 'gpt-5-6-luna'
+    const modelName = model || 'grok-3'
     const isVideo = modelName.includes('grok') || modelName.includes('veo') || modelName.includes('seedance')
-    const isTextModel = modelName.includes('gpt-5-6-luna')
     let cost = 25 // default for image (GPT Image-2)
-    if (isTextModel) {
-      cost = 2 // Minimum required for text
-    } else if (isVideo) {
+    if (isVideo) {
       if (modelName.includes('seedance')) {
         const durationSeconds = Number(duration) || 5;
         const hasImage = attachments && attachments.length > 0;
@@ -419,8 +416,8 @@ export async function POST(request) {
       )
     }
 
-    // 2. Deduct credits (Only for video/image initially, text models deduct after generation)
-    if (!isAdminUser && !isTextModel) {
+    // 2. Deduct credits
+    if (!isAdminUser) {
       const { error: deductError } = await supabaseAdmin
         .from('profiles')
         .update({ credit_used: profile.credit_used + cost })
@@ -482,105 +479,7 @@ export async function POST(request) {
     let isMock = false
     let apiErrorMsg = null
 
-    if (isTextModel) {
-      // Call Text API
-      const apiKey = process.env.KIE_API_KEY
-      if (!apiKey) {
-        return NextResponse.json({ error: 'Erro: API Key do KIE não configurada.' }, { status: 500 })
-      }
-
-      let generatedText = ''
-      let finalCost = 0
-      let usageData = null
-      
-      try {
-        const payload = {
-          model: modelName,
-          stream: false,
-          input: [
-            ...messages.map(m => ({
-              role: m.role,
-              content: [{ type: 'input_text', text: m.text }]
-            })),
-            {
-              role: 'user',
-              content: [
-                { type: 'input_text', text: text },
-                ...(processedAttachments || []).map(att => ({ type: 'input_image', image_url: att }))
-              ]
-            }
-          ]
-        }
-
-        const endpointUrl = 'https://api.kie.ai/api/v1/responses'
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 60000)
-
-        const apiRes = await fetch(endpointUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload),
-          signal: controller.signal
-        })
-        clearTimeout(timeoutId)
-
-        const responseTextData = await apiRes.text()
-        if (apiRes.ok) {
-          const data = JSON.parse(responseTextData)
-          
-          if (data && data.output) {
-            const msgObj = data.output.find(o => o.type === 'message' && o.role === 'assistant')
-            if (msgObj && msgObj.content) {
-               generatedText = msgObj.content.map(c => c.text).join('')
-            }
-          }
-          if (data && data.usage) {
-            usageData = data.usage
-            const inTokens = usageData.input_tokens || 0
-            const outTokens = usageData.output_tokens || 0
-            finalCost = (inTokens / 1000 * 0.1) + (outTokens / 1000 * 0.8)
-          }
-
-          console.log(`[TEXT-GEN] Success! usage=${JSON.stringify(usageData)}, finalCost=${finalCost}`)
-          
-          if (!isAdminUser && finalCost > 0) {
-            await supabaseAdmin.from('profiles').update({ credit_used: profile.credit_used + finalCost }).eq('id', user.id)
-          }
-        } else {
-          console.error(`[TEXT-GEN] API error: status=${apiRes.status}, body=${responseTextData.substring(0, 300)}`)
-          return NextResponse.json({ error: `Erro na API de texto (${apiRes.status})` }, { status: apiRes.status })
-        }
-      } catch (err) {
-        console.error(`[TEXT-GEN] Request error:`, err.message)
-        return NextResponse.json({ error: `Erro na comunicação com a API de texto: ${err.message}` }, { status: 500 })
-      }
-
-      // Save Completed Assistant Message
-      const assistantMsgId = 'msg-' + crypto.randomBytes(8).toString('hex')
-      const { data: assistantMsg, error: aMsgError } = await supabaseAdmin
-        .from('chat_messages')
-        .insert({
-          id: assistantMsgId,
-          session_id: sessionId,
-          user_id: user.id,
-          role: 'assistant',
-          text: generatedText,
-          status: 'completed',
-          model_name: modelName,
-          cost: finalCost
-        })
-        .select()
-        .single()
-
-      if (aMsgError) console.error('[MESSAGES-POST] Assistant msg error:', aMsgError)
-      
-      return NextResponse.json({ userMsg, assistantMsg, isMock: false, apiError: null })
-    }
-
-    if (modelName.includes('grok') || modelName.includes('veo')) {
+    if (modelName.includes('grok') || modelName.includes('veo') || modelName.includes('seedance')) {
       // Call Video API
       const isGrok = modelName.includes('grok')
       const isVeo = modelName.includes('veo')

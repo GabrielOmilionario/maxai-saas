@@ -49,7 +49,7 @@ const MaxLogo = ({ size = 32 }) => (
 
 /* ──────────────── MODEL CONFIG ──────────────── */
 const MODELS = [
-  { key: 'gpt-5-6-luna', label: 'GPT 5.6 Luna', icon: Code2, accent: 'blue', type: 'text' },
+  { key: 'gpt-image', label: 'GPT Image-2', icon: ImageIcon, accent: 'blue', type: 'image' },
   { key: 'grok-3', label: 'Grok - Vídeo', icon: Video, accent: 'purple', type: 'video' },
   { key: 'veo-3.1-fast', label: 'Veo 3.1 Fast', icon: Video, accent: 'green', type: 'video' },
   { key: 'veo-3.1-lite', label: 'Veo 3.1 Lite', icon: Video, accent: 'teal', type: 'video' },
@@ -71,7 +71,7 @@ function DashboardContent() {
 
   const [messages, setMessages] = useState([])
   const [prompt, setPrompt] = useState('')
-  const [activeModel, setActiveModel] = useState('gpt-5-6-luna')
+  const [activeModel, setActiveModel] = useState('gpt-image')
   const [plansModalOpen, setPlansModalOpen] = useState(false)
   const [attachments, setAttachments] = useState([])
   const [loading, setLoading] = useState(false)
@@ -522,8 +522,6 @@ function DashboardContent() {
         if (dur === '15') return 105
         return 55
       }
-    } else if (activeModel === 'gpt-5-6-luna') {
-      return 'Variável'
     } else {
       return 25
     }
