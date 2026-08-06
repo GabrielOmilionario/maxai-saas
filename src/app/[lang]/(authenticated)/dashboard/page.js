@@ -49,7 +49,7 @@ const MaxLogo = ({ size = 32 }) => (
 
 /* ──────────────── MODEL CONFIG ──────────────── */
 const MODELS = [
-  { key: 'gpt-image', label: 'GPT Image-2', icon: ImageIcon, accent: 'blue', type: 'image' },
+  { key: 'gpt-image', label: 'GPT IMAGE-2', icon: ImageIcon, accent: 'blue', type: 'image' },
   { key: 'grok-3', label: 'Grok - Vídeo', icon: Video, accent: 'purple', type: 'video' },
   { key: 'veo-3.1-fast', label: 'Veo 3.1 Fast', icon: Video, accent: 'green', type: 'video' },
   { key: 'veo-3.1-lite', label: 'Veo 3.1 Lite', icon: Video, accent: 'teal', type: 'video' },
