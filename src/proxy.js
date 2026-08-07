@@ -60,6 +60,11 @@ export async function proxy(request) {
     return supabaseResponse
   }
 
+  // 1.5 Ignorar rota pública de pages
+  if (path === '/pages') {
+    return supabaseResponse
+  }
+
   // 2. Determinar o idioma atual ou redirecionar
   let pathnameHasLocale = locales.some((loc) => path.startsWith(`/${loc}/`) || path === `/${loc}`)
   let locale = defaultLocale
@@ -81,7 +86,7 @@ export async function proxy(request) {
   const isRoot = pathWithoutLocale === '/'
 
   // Se o usuário NÃO está logado e tenta acessar rotas protegidas
-  if (!user && !isAuthPage) {
+  if (!user && !isAuthPage && pathWithoutLocale !== '/pages') {
     const url = request.nextUrl.clone()
     url.pathname = `/${locale}/login`
     return NextResponse.redirect(url)
