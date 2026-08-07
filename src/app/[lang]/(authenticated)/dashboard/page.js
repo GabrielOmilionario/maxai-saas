@@ -33,7 +33,8 @@ import {
   Search,
   Music,
   Code2,
-  Wand2
+  Wand2,
+  MessageSquare
 } from 'lucide-react'
 
 /* ──────────────── MAX LOGO ──────────────── */
@@ -50,6 +51,7 @@ const MaxLogo = ({ size = 32 }) => (
 /* ──────────────── MODEL CONFIG ──────────────── */
 const MODELS = [
   { key: 'gpt-image', label: 'Gpt Image-2', icon: ImageIcon, accent: 'blue', type: 'image' },
+  { key: 'gemini-3', label: 'Gemini 3 — Texto', icon: MessageSquare, accent: 'orange', type: 'text' },
   { key: 'grok-3', label: 'Grok - Vídeo', icon: Video, accent: 'purple', type: 'video' },
   { key: 'veo-3.1-fast', label: 'Veo 3.1 Fast', icon: Video, accent: 'green', type: 'video' },
   { key: 'veo-3.1-lite', label: 'Veo 3.1 Lite', icon: Video, accent: 'teal', type: 'video' },
@@ -423,6 +425,32 @@ function DashboardContent() {
         if (isNewSession) {
           router.push(`/dashboard?sessionId=${currentSessionId}`)
         } else {
+          const contentType = res.headers.get('content-type')
+          if (contentType && (contentType.includes('text/plain') || contentType.includes('text/event-stream'))) {
+            // Streaming text response
+            const reader = res.body.getReader()
+            const decoder = new TextDecoder()
+            
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) break
+              
+              const chunkText = decoder.decode(value, { stream: true })
+              if (chunkText) {
+                setMessages(prev => {
+                  const lastMsg = prev[prev.length - 1]
+                  if (lastMsg && lastMsg.role === 'assistant') {
+                    return [
+                      ...prev.slice(0, -1),
+                      { ...lastMsg, text: lastMsg.text + chunkText, status: 'completed' }
+                    ]
+                  }
+                  return prev
+                })
+              }
+            }
+          }
+          
           fetchMessages(true)
           refreshProfile()
         }
@@ -610,18 +638,19 @@ function DashboardContent() {
         <div className="flex items-center gap-2">
 
           {/* Upload button */}
-          <div className="relative shrink-0" ref={modelMenuRef}>
-            <button
-              type="button"
-              onClick={() => setModelMenuOpen(!modelMenuOpen)}
-              className="upload-btn"
-              title="Adicionar"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
+          {activeModel !== 'gemini-3' && (
+            <div className="relative shrink-0" ref={modelMenuRef}>
+              <button
+                type="button"
+                onClick={() => setModelMenuOpen(!modelMenuOpen)}
+                className="upload-btn"
+                title="Adicionar"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
 
-            {/* Floating menu */}
-            {modelMenuOpen && (
+              {/* Floating menu */}
+              {modelMenuOpen && (
               <div
                 className="absolute bottom-full left-0 mb-3 animate-slide-up text-left"
                 style={{
@@ -842,6 +871,7 @@ function DashboardContent() {
               </div>
             )}
           </div>
+          )}
 
           <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
 
@@ -859,7 +889,7 @@ function DashboardContent() {
             }}
             onPaste={handlePaste}
             disabled={sending}
-            placeholder={isVideoModel ? dict.dashboard.describePromptVideo : dict.dashboard.describePromptImage}
+            placeholder={activeModel === 'gemini-3' ? 'Como posso te ajudar hoje?' : (isVideoModel ? dict.dashboard.describePromptVideo : dict.dashboard.describePromptImage)}
             rows={1}
             className="flex-1 bg-transparent border-0 focus:outline-none resize-none leading-relaxed py-2 min-h-[28px] max-h-[160px] disabled:opacity-50"
             style={{

@@ -365,7 +365,8 @@ export async function POST(request) {
 
     const modelName = model || 'grok-3'
     const isVideo = modelName.includes('grok') || modelName.includes('veo')
-    let cost = 25 // default for image (GPT Image-2)
+    const isText = modelName.includes('gemini-3')
+    let cost = isText ? 1 : 25 // default for image (GPT Image-2)
     if (isVideo) {
       if (modelName.includes('veo')) {
         cost = 18
@@ -471,7 +472,118 @@ export async function POST(request) {
     let isMock = false
     let apiErrorMsg = null
 
-    if (modelName.includes('grok') || modelName.includes('veo')) {
+    if (isText) {
+      // GEMINI 3 STREAMING LOGIC
+      const { data: pastMessages } = await supabaseAdmin
+        .from('chat_messages')
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true })
+
+      const contents = []
+      if (pastMessages) {
+        for (const m of pastMessages) {
+          if (m.text) {
+             contents.push({
+               role: m.role === 'assistant' ? 'model' : 'user',
+               parts: [{ text: m.text }]
+             })
+          }
+        }
+      }
+
+      const apiKey = process.env.KIE_API_KEY
+      if (!apiKey) {
+        if (!isAdminUser) {
+           await supabaseAdmin.from('profiles').update({ credit_used: profile.credit_used }).eq('id', user.id)
+        }
+        return NextResponse.json({ error: 'Chave de API não configurada' }, { status: 500 })
+      }
+
+      const streamEndpoint = 'https://api.kie.ai/gemini/v1/models/gemini-3-flash-v1betamodels:streamGenerateContent'
+      const response = await fetch(streamEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          stream: true,
+          contents
+        })
+      })
+
+      if (!response.ok) {
+        const errText = await response.text()
+        console.error('[GEMINI] Error response:', errText)
+        if (!isAdminUser) {
+           await supabaseAdmin.from('profiles').update({ credit_used: profile.credit_used }).eq('id', user.id)
+        }
+        return NextResponse.json({ error: 'Erro ao conectar com Gemini 3' }, { status: 500 })
+      }
+
+      // We save a placeholder assistant message first
+      const assistantMsgId = 'msg-' + crypto.randomBytes(8).toString('hex')
+      await supabaseAdmin.from('chat_messages').insert({
+        id: assistantMsgId,
+        session_id: sessionId,
+        user_id: user.id,
+        role: 'assistant',
+        text: '',
+        status: 'completed',
+        model_name: modelName,
+      })
+
+      // Return stream
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      const encoder = new TextEncoder()
+      let fullText = ''
+
+      const stream = new ReadableStream({
+        async pull(controller) {
+          try {
+            const { done, value } = await reader.read()
+            if (done) {
+              if (fullText) {
+                 await supabaseAdmin.from('chat_messages').update({ text: fullText }).eq('id', assistantMsgId)
+              }
+              controller.close()
+              return
+            }
+            
+            const chunk = decoder.decode(value, { stream: true })
+            const lines = chunk.split('\n')
+            for (const line of lines) {
+              if (line.startsWith('data: ') && !line.includes('[DONE]')) {
+                 try {
+                    const data = JSON.parse(line.substring(6))
+                    const textChunk = data.candidates?.[0]?.content?.parts?.[0]?.text
+                    if (textChunk) {
+                      fullText += textChunk
+                      controller.enqueue(encoder.encode(textChunk))
+                    }
+                 } catch(e) {}
+              }
+            }
+          } catch(err) {
+            console.error('[GEMINI] Stream error:', err)
+            controller.error(err)
+          }
+        },
+        async cancel() {
+          await reader.cancel()
+        }
+      })
+
+      return new NextResponse(stream, {
+        headers: {
+          'Content-Type': 'text/plain',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        }
+      })
+    } else if (modelName.includes('grok') || modelName.includes('veo')) {
       // Call Video API
       const isGrok = modelName.includes('grok')
       const isVeo = modelName.includes('veo')
