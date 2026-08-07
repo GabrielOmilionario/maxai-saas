@@ -21,7 +21,7 @@ const PLANS = [
     ],
     highlight: false,
     cta: 'Começar Grátis',
-    href: '/auth',
+    href: 'https://www.maxai.website/pt/register',
   },
   {
     name: 'Iniciante',
@@ -230,7 +230,7 @@ export default function LandingPage() {
             <a href="#modelos" className="lp-nav-link">Modelos</a>
             <a href="#planos" className="lp-nav-link">Planos</a>
             <a href="#faq" className="lp-nav-link">FAQ</a>
-            <a href="/auth" className="lp-cta-btn-small">Começar Grátis</a>
+            <a href="https://www.maxai.website/pt/register" className="lp-cta-btn-small">Começar Grátis</a>
           </nav>
 
           {/* Mobile Hamburger */}
@@ -275,7 +275,7 @@ export default function LandingPage() {
             </a>
           ))}
           <a
-            href="/auth"
+            href="https://www.maxai.website/pt/register"
             className="lp-cta-btn-small"
             style={{ marginTop: '12px', fontSize: '16px', padding: '14px 32px' }}
           >
@@ -351,7 +351,7 @@ export default function LandingPage() {
 
           {/* CTAs */}
           <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/auth" className="lp-cta-btn-primary">
+            <a href="https://www.maxai.website/pt/register" className="lp-cta-btn-primary">
               Começar Grátis →
             </a>
             <a href="#planos" className="lp-cta-btn-secondary">
@@ -635,7 +635,7 @@ export default function LandingPage() {
               Comece grátis agora mesmo. Sem cartão de crédito, sem compromisso. 100 créditos de bônus no cadastro.
             </p>
             <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <a href="/auth" className="lp-cta-btn-primary">
+              <a href="https://www.maxai.website/pt/register" className="lp-cta-btn-primary">
                 Criar Minha Conta Grátis →
               </a>
               <a
@@ -667,7 +667,7 @@ export default function LandingPage() {
           </p>
           <div style={{ display: 'flex', gap: '20px', fontSize: '12px' }}>
             <a href="mailto:adventistasdosabado@gmail.com" style={{ color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Suporte</a>
-            <a href="/auth" style={{ color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Login</a>
+            <a href="https://www.maxai.website/pt/login" style={{ color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>Login</a>
           </div>
         </div>
       </footer>

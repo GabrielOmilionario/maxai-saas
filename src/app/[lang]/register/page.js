@@ -11,7 +11,6 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
   const router = useRouter()
@@ -38,17 +37,15 @@ export default function RegisterPage() {
 
       if (signUpError) {
         let msg = signUpError.message
-        if (msg.toLowerCase().includes('to signup, please confirm your email') || msg.toLowerCase().includes('confirm your email')) {
-          msg = 'Para concluir o cadastro, por favor confirme seu e-mail através do link enviado.'
-        } else if (msg.toLowerCase().includes('user already registered') || msg.toLowerCase().includes('already registered')) {
+        if (msg.toLowerCase().includes('user already registered') || msg.toLowerCase().includes('already registered')) {
           msg = 'Este e-mail já está cadastrado.'
         }
         setError(msg)
       } else {
         setSuccess(true)
         setTimeout(() => {
-          router.push('/login')
-        }, 5000)
+          router.push('/dashboard')
+        }, 1500)
       }
     } catch (err) {
       setError('Ocorreu um erro ao criar a conta.')
@@ -155,7 +152,7 @@ export default function RegisterPage() {
             marginBottom: '24px',
             textAlign: 'center'
           }}>
-            Conta criada com sucesso! Por favor, verifique seu e-mail para confirmar seu cadastro antes de fazer login.
+            Conta criada com sucesso! Redirecionando...
           </div>
         )}
 
