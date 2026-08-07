@@ -47,15 +47,7 @@ export async function POST(request) {
     }
 
     let videoCost = 20
-    const isSeedanceReq = model && model.toLowerCase().includes('seedance')
-    if (isSeedanceReq) {
-      const durationSeconds = Number(duration) || 5;
-      if (resolution === '720p') {
-        videoCost = (ref_image ? 85 : 140) * durationSeconds;
-      } else {
-        videoCost = (ref_image ? 40 : 65) * durationSeconds;
-      }
-    } else if (model && model.toLowerCase().includes('veo')) {
+    if (model && model.toLowerCase().includes('veo')) {
       videoCost = 18;
     } else {
       // Grok
@@ -105,10 +97,8 @@ export async function POST(request) {
 
     // 4. Trigger external generation
     const apiKey = process.env.GEMINIGEN_API_KEY
-    const seedanceApiKey = process.env.KIE_API_KEY
     const reapiApiKey = process.env.REAPI_API_KEY
     const modelName = model || 'grok-3'
-    const isSeedance = modelName.toLowerCase().includes('seedance')
     const isGrok = modelName.toLowerCase().includes('grok')
     const isVeo = modelName.toLowerCase().includes('veo')
     const isExtend = !!extendVideoId
@@ -119,26 +109,19 @@ export async function POST(request) {
       endpoint = isVeo ? 'https://api.snapgen.ai/uapi/v1/video-gen/veo' : 'https://api.snapgen.ai/uapi/v1/video-gen/grok';
     }
 
-    console.log(`[GENERATE-VIDEO] Endpoint: ${endpoint}, isSeedance=${isSeedance}, isGrok=${isGrok}, isVeo=${isVeo}, isExtend=${isExtend}`)
+    console.log(`[GENERATE-VIDEO] Endpoint: ${endpoint}, isGrok=${isGrok}, isVeo=${isVeo}, isExtend=${isExtend}`)
 
     let externalId = null
     let status = 'processing'
     let isMock = false
     let apiErrorMsg = null
 
-    const isSeedanceOrGrok = isSeedance || isGrok;
-
-    if (isSeedance && !seedanceApiKey) {
-      if (!isAdminUser) {
-        await supabaseAdmin.from('profiles').update({ credit_used: profile.credit_used }).eq('id', user.id)
-      }
-      return NextResponse.json({ error: 'Erro: A chave de API (KIE_API_KEY) não está configurada no servidor.' }, { status: 500 })
-    } else if (isGrok && !reapiApiKey) {
+    if (isGrok && !reapiApiKey) {
       if (!isAdminUser) {
         await supabaseAdmin.from('profiles').update({ credit_used: profile.credit_used }).eq('id', user.id)
       }
       return NextResponse.json({ error: 'Erro: A chave de API (REAPI_API_KEY) não está configurada no servidor.' }, { status: 500 })
-    } else if (!isSeedanceOrGrok && !apiKey) {
+    } else if (!isGrok && !apiKey) {
       if (!isAdminUser) {
         await supabaseAdmin.from('profiles').update({ credit_used: profile.credit_used }).eq('id', user.id)
       }
@@ -149,7 +132,7 @@ export async function POST(request) {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 55000)
 
-        if (isSeedance || isGrok) {
+        if (isGrok) {
           const callBackUrl = process.env.NEXT_PUBLIC_SITE_URL 
             ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook/video`
             : `https://${request.headers.get('host')}/api/webhook/video`;
@@ -163,31 +146,7 @@ export async function POST(request) {
 
           let payload = {};
 
-          if (isSeedance) {
-            payload = {
-              model: "bytedance/seedance-2-fast",
-              callBackUrl: callBackUrl,
-              input: {
-                prompt: prompt,
-                resolution: resolution || '720p',
-                aspect_ratio: mappedAspectRatio,
-                duration: parseInt(duration) || 5,
-              }
-            };
-            if (uploadedRefImageUrl) {
-              payload.input.first_frame_url = uploadedRefImageUrl;
-            }
-            console.log(`[GENERATE-VIDEO] Sending Request to Kie API (Seedance)`);
-            apiResponse = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${seedanceApiKey}`
-              },
-              body: JSON.stringify(payload),
-              signal: controller.signal,
-            });
-          } else if (isGrok) {
+          if (isGrok) {
             if (isExtend) {
               return NextResponse.json({ error: 'Extensão de vídeo não é suportada para o modelo Grok atualmente.' }, { status: 400 });
             }
@@ -275,15 +234,8 @@ export async function POST(request) {
         if (apiResponse.ok) {
           try {
             const apiData = JSON.parse(responseText)
-            if (isSeedance || isGrok) {
-              if (isGrok) {
-                externalId = apiData.id;
-              } else {
-                if (apiData.code !== 200) {
-                   throw new Error(apiData.msg || `Erro na API ${modelName}`)
-                }
-                externalId = apiData.data?.taskId
-              }
+            if (isGrok) {
+              externalId = apiData.id;
             } else {
               externalId = apiData.uuid
             }

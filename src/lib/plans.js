@@ -51,7 +51,7 @@ export async function validatePlanLimits(userId, modelName) {
   
   // 2. Validate tool permissions (All tools are allowed in all plans)
   const normalizedModel = modelName.toLowerCase()
-  const isVideo = normalizedModel.includes('grok') || normalizedModel.includes('veo') || normalizedModel.includes('seedance')
+  const isVideo = normalizedModel.includes('grok') || normalizedModel.includes('veo')
   const isImage = normalizedModel.includes('gpt-image') || normalizedModel.includes('image')
   
   // 3. Validate video generation limits (only for Iniciante plan)

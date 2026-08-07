@@ -29,7 +29,7 @@ export async function generateMetadata({ params }) {
   
   return {
     title: lang === 'es' ? "MAX AI — Generación de Videos e Imágenes con IA" : "MAX AI — Geração de Vídeos e Imagens com IA",
-    description: lang === 'es' ? "Plataforma SaaS para generación de videos e imágenes usando modelos de IA como Grok-3, Veo 3.1 y GPT Image-2." : "Plataforma SaaS para geração de vídeos e imagens usando modelos de IA como Grok-3, Veo 3.1 e GPT Image-2.",
+    description: lang === 'es' ? "Plataforma SaaS para generación de videos e imágenes usando modelos de IA como Grok-3, Veo 3.1 y Gpt Image-2." : "Plataforma SaaS para geração de vídeos e imagens usando modelos de IA como Grok-3, Veo 3.1 e Gpt Image-2.",
     manifest: "/manifest.json",
     icons: {
       icon: "/favicon.png",

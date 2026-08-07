@@ -7,7 +7,7 @@ const inter = Inter({
 
 export const metadata = {
   title: "MAX AI — Crie Imagens e Vídeos Incríveis com Inteligência Artificial",
-  description: "Plataforma de IA para geração de imagens e vídeos profissionais. Modelos GPT Image-2, Grok, Veo 3.1 e Seedance 2.0. Comece grátis.",
+  description: "Plataforma de IA para geração de imagens e vídeos profissionais. Modelos Gpt Image-2, Grok e Veo 3.1. Comece grátis.",
   icons: {
     icon: "/favicon.png",
     apple: "/icons/max-ai-icon.png",

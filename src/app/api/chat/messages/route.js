@@ -267,7 +267,7 @@ export async function GET(request) {
                     console.log(`[POLL-IMAGE] Image ready! URL=${finalUrl?.substring(0, 80)}...`)
 
                     if (finalUrl) {
-                      const mediaType = msg.model_name?.includes('seedance') ? 'video' : 'image'
+                      const mediaType = 'image'
                       finalUrl = await uploadRemoteUrlToSupabase(finalUrl, mediaType)
                       console.log(`[POLL-IMAGE] Uploaded to Supabase: ${finalUrl?.substring(0, 80)}...`)
 
@@ -364,18 +364,10 @@ export async function POST(request) {
     }
 
     const modelName = model || 'grok-3'
-    const isVideo = modelName.includes('grok') || modelName.includes('veo') || modelName.includes('seedance')
+    const isVideo = modelName.includes('grok') || modelName.includes('veo')
     let cost = 25 // default for image (GPT Image-2)
     if (isVideo) {
-      if (modelName.includes('seedance')) {
-        const durationSeconds = Number(duration) || 5;
-        const hasImage = attachments && attachments.length > 0;
-        if (resolution === '720p') {
-          cost = (hasImage ? 85 : 140) * durationSeconds;
-        } else {
-          cost = (hasImage ? 40 : 65) * durationSeconds;
-        }
-      } else if (modelName.includes('veo')) {
+      if (modelName.includes('veo')) {
         cost = 18
       } else {
         // Grok
@@ -479,7 +471,7 @@ export async function POST(request) {
     let isMock = false
     let apiErrorMsg = null
 
-    if (modelName.includes('grok') || modelName.includes('veo') || modelName.includes('seedance')) {
+    if (modelName.includes('grok') || modelName.includes('veo')) {
       // Call Video API
       const isGrok = modelName.includes('grok')
       const isVeo = modelName.includes('veo')
@@ -636,18 +628,7 @@ export async function POST(request) {
           const hasImage = processedAttachments && processedAttachments.length > 0
           
           let payload;
-          if (modelName.includes('seedance')) {
-            payload = {
-              model: "bytedance/seedance-2-fast",
-              input: {
-                prompt: text,
-                resolution: resolution || '720p',
-                aspect_ratio: aspectRatio || '16:9',
-                duration: parseInt(duration) || 5,
-                ...(hasImage && { reference_image_urls: [processedAttachments[0]] })
-              }
-            }
-          } else if (isReapiImage) {
+          if (isReapiImage) {
             let reapiSize = '1:1';
             if (aspectRatio) {
               const validSizes = ['auto', '1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '5:4', '4:5', '2:1', '1:2', '21:9', '9:21'];

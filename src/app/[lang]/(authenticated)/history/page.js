@@ -37,8 +37,7 @@ const formatDate = (dateStr) => {
 const getModelDisplayName = (modelName) => {
   if (!modelName) return 'Desconhecido'
   if (modelName.includes('grok')) return 'Grok - Vídeo'
-  if (modelName.includes('seedance')) return 'Seedance 2.0'
-  if (modelName.includes('gpt-image')) return 'GPT Image-2'
+  if (modelName.includes('gpt-image')) return 'Gpt Image-2'
   return modelName
 }
 

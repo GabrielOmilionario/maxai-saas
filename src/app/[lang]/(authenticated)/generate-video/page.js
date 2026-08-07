@@ -24,14 +24,7 @@ export default function GenerateVideoPage() {
   const router = useRouter()
 
   let videoCost = 20;
-  if (model === 'seedance-2') {
-    const durationSeconds = Number(duration) || 5;
-    if (resolution === '720p') {
-      videoCost = (refImage ? 85 : 140) * durationSeconds;
-    } else {
-      videoCost = (refImage ? 40 : 65) * durationSeconds;
-    }
-  } else if (model.includes('veo')) {
+  if (model.includes('veo')) {
     videoCost = 18;
   } else {
     // Grok
@@ -262,7 +255,6 @@ export default function GenerateVideoPage() {
                   <option value="grok-3">Grok-3 Video</option>
                   <option value="veo-3.1-fast">Veo 3.1 Fast</option>
                   <option value="veo-3.1-lite">Veo 3.1 Lite</option>
-                  <option value="seedance-2">Seedance 2.0</option>
                 </select>
               </div>
 

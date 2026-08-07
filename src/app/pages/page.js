@@ -14,7 +14,7 @@ const PLANS = [
     description: 'Para testar a plataforma e começar a criar.',
     credits: '100 créditos de bônus',
     features: [
-      'GPT Image-2 (Imagens)',
+      'Gpt Image-2 (Imagens)',
       'Grok (Vídeos)',
       '100 créditos no cadastro',
       'Sem cartão de crédito',
@@ -31,7 +31,7 @@ const PLANS = [
     description: 'Para criadores casuais que querem consistência.',
     credits: '3.000 créditos/mês',
     features: [
-      'GPT Image-2 (Imagens)',
+      'Gpt Image-2 (Imagens)',
       'Grok (Vídeos)',
       '3.000 créditos por mês',
       'Limite: 10 vídeos/dia',
@@ -49,8 +49,8 @@ const PLANS = [
     description: 'Para profissionais e criativos que escalam.',
     credits: '6.000 créditos/mês',
     features: [
-      'GPT Image-2 (Imagens)',
-      'Grok + Veo 3.1 + Seedance 2.0',
+      'Gpt Image-2 (Imagens)',
+      'Grok + Veo 3.1',
       '6.000 créditos por mês',
       'Sem limite diário',
       'Suporte prioritário',
@@ -81,8 +81,8 @@ const PLANS = [
 
 const FAQ_ITEMS = [
   {
-    q: 'O que é o MAX AI?',
-    a: 'MAX AI é uma plataforma de inteligência artificial que permite criar imagens e vídeos profissionais a partir de descrições em texto. Utilizamos os melhores modelos do mundo como GPT Image-2, Grok, Veo 3.1 e Seedance 2.0.',
+    q: 'Quais modelos de IA o MAX AI utiliza?',
+    a: 'MAX AI é uma plataforma de inteligência artificial que permite criar imagens e vídeos profissionais a partir de descrições em texto. Utilizamos os melhores modelos do mundo como Gpt Image-2, Grok e Veo 3.1.',
   },
   {
     q: 'Preciso ter experiência com IA para usar?',
@@ -112,7 +112,7 @@ const FAQ_ITEMS = [
 
 const MODELS = [
   {
-    name: 'GPT Image-2',
+    name: 'Gpt Image-2',
     type: 'Imagens',
     desc: 'O modelo mais avançado da OpenAI para geração de imagens fotorrealistas e artísticas a partir de texto.',
     icon: '🎨',
@@ -131,13 +131,6 @@ const MODELS = [
     desc: 'Motor de vídeo do Google com qualidade cinematográfica. Disponível em versões Fast e Lite.',
     icon: '🌟',
     color: '#10B981',
-  },
-  {
-    name: 'Seedance 2.0',
-    type: 'Vídeos',
-    desc: 'Modelo especializado em vídeos com movimentos fluidos e naturais, ideal para dança e ação.',
-    icon: '💃',
-    color: '#6366F1',
   },
 ]
 
@@ -353,7 +346,7 @@ export default function LandingPage() {
             margin: '0 auto 40px',
             fontWeight: '400',
           }}>
-            Os melhores modelos do mundo — GPT Image-2, Grok, Veo 3.1 e Seedance — reunidos em uma única plataforma simples e poderosa.
+            Os melhores modelos do mundo — Gpt Image-2, Grok e Veo 3.1 — reunidos em uma única plataforma simples e poderosa.
           </p>
 
           {/* CTAs */}
@@ -425,8 +418,8 @@ export default function LandingPage() {
 
           <div className="lp-features-grid">
             {[
-              { icon: '🖼️', title: 'Geração de Imagens', desc: 'Crie ilustrações, fotos realistas, designs e arte digital com o GPT Image-2 a partir de descrições em texto.', color: '#3B82F6' },
-              { icon: '🎬', title: 'Geração de Vídeos', desc: 'Produza vídeos cinematográficos com Grok, Veo 3.1 e Seedance 2.0 em até 1080p Full HD.', color: '#A78BFA' },
+              { icon: '🖼️', title: 'Geração de Imagens', desc: 'Crie ilustrações, fotos realistas, designs e arte digital com o Gpt Image-2 a partir de descrições em texto.', color: '#3B82F6' },
+              { icon: '🎬', title: 'Geração de Vídeos', desc: 'Produza vídeos cinematográficos com Grok e Veo 3.1 em até 1080p Full HD.', color: '#A78BFA' },
               { icon: '🖼️➡️🎬', title: 'Imagem para Vídeo', desc: 'Transforme suas imagens estáticas em vídeos dinâmicos. Envie uma referência e a IA anima.', color: '#10B981' },
               { icon: '⚡', title: 'Processamento Rápido', desc: 'Gerações em segundos para imagens e poucos minutos para vídeos. Sem filas de espera.', color: '#F59E0B' },
               { icon: '🎛️', title: 'Controle Total', desc: 'Escolha resolução, proporção, duração e estilo. Parâmetros ajustáveis para cada modelo.', color: '#EC4899' },

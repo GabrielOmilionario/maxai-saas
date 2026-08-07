@@ -49,11 +49,10 @@ const MaxLogo = ({ size = 32 }) => (
 
 /* ──────────────── MODEL CONFIG ──────────────── */
 const MODELS = [
-  { key: 'gpt-image', label: 'GPT IMAGE-2', icon: ImageIcon, accent: 'blue', type: 'image' },
+  { key: 'gpt-image', label: 'Gpt Image-2', icon: ImageIcon, accent: 'blue', type: 'image' },
   { key: 'grok-3', label: 'Grok - Vídeo', icon: Video, accent: 'purple', type: 'video' },
   { key: 'veo-3.1-fast', label: 'Veo 3.1 Fast', icon: Video, accent: 'green', type: 'video' },
   { key: 'veo-3.1-lite', label: 'Veo 3.1 Lite', icon: Video, accent: 'teal', type: 'video' },
-  { key: 'seedance-2', label: 'Seedance 2.0', icon: Video, accent: 'indigo', type: 'video' },
 ]
 
 const QUICK_ACTIONS = [
@@ -134,10 +133,6 @@ function DashboardContent() {
       setVideoResolution('480p')
       setVideoDuration(6)
       setVideoAspectRatio('landscape')
-    } else if (key === 'seedance-2') {
-      setVideoResolution('480p')
-      setVideoDuration(5)
-      setVideoAspectRatio('16:9')
     }
   }
 
@@ -498,15 +493,7 @@ function DashboardContent() {
 
   /* ── Compute estimated credit cost ── */
   const getEstimatedCost = () => {
-    if (activeModel === 'seedance-2') {
-      const dur = Number(videoDuration) || 5
-      const hasRef = attachments.length > 0
-      if (videoResolution === '720p') {
-        return (hasRef ? 85 : 140) * dur
-      } else {
-        return (hasRef ? 40 : 65) * dur
-      }
-    } else if (activeModel.includes('veo')) {
+    if (activeModel.includes('veo')) {
       return 18
     } else if (activeModel === 'grok-3') {
       const dur = String(videoDuration)
@@ -850,50 +837,6 @@ function DashboardContent() {
                     <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', padding: '0 2px' }}>
                       🎥 Custo: <strong style={{ color: '#10b981' }}>18 créditos</strong>
                     </p>
-                  </div>
-                )}
-
-                {/* Seedance Settings */}
-                {activeModel === 'seedance-2' && (
-                  <div
-                    className="space-y-3 mt-3 pt-3"
-                    style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-                  >
-                    <p style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.3)', padding: '0 4px' }}>
-                      Configurações do Seedance
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { label: 'Proporção', value: videoAspectRatio, onChange: setVideoAspectRatio, options: [['16:9','Horizontal (16:9)'],['9:16','Vertical (9:16)'],['1:1','Quadrado (1:1)'],['4:3','Horizontal (4:3)'],['3:4','Vertical (3:4)'],['21:9','Cinemático (21:9)'],['adaptive','Adaptativo']] },
-                        { label: 'Resolução', value: videoResolution, onChange: setVideoResolution, options: [['480p','480p'],['720p','720p']] },
-                        { label: 'Duração', value: videoDuration, onChange: (v) => setVideoDuration(Number(v)), options: [[4,'4 segundos'],[5,'5 segundos'],[10,'10 segundos'],[15,'15 segundos']] },
-                      ].map(({ label, value, onChange, options }) => (
-                        <div key={label} className="space-y-1">
-                          <label style={{ fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(255,255,255,0.35)', display: 'block' }}>{label}</label>
-                          <select
-                            value={value}
-                            onChange={(e) => onChange(e.target.value)}
-                            className="w-full focus:outline-none cursor-pointer"
-                            style={{
-                              background: 'rgba(0,0,0,0.3)',
-                              border: '1px solid rgba(255,255,255,0.08)',
-                              color: 'rgba(255,255,255,0.85)',
-                              borderRadius: '8px',
-                              padding: '6px 10px',
-                              fontSize: '11px',
-                              transition: 'border-color 0.2s ease',
-                            }}
-                            onFocus={e => e.currentTarget.style.borderColor = 'rgba(124,58,237,0.4)'}
-                            onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
-                          >
-                            {options.map(([val, lbl]) => (
-                              <option key={val} value={val}>{lbl}</option>
-                            ))}
-                          </select>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 )}
               </div>

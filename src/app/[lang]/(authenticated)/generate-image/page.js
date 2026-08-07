@@ -37,7 +37,7 @@ export default function GenerateImagePage() {
             Ferramenta Premium
           </h1>
           <p className="text-zinc-400 text-xs mt-2 leading-relaxed">
-            O gerador de imagens **GPT Image-2** está disponível apenas nos planos **Criador** e **Empresas**. Veja os planos abaixo para fazer o upgrade.
+            O gerador de imagens **Gpt Image-2** está disponível apenas nos planos **Criador** e **Empresas**. Veja os planos abaixo para fazer o upgrade.
           </p>
         </div>
 
@@ -235,7 +235,7 @@ export default function GenerateImagePage() {
           <ImageIcon className="h-7 w-7 text-brand-blue" /> Gerador de Imagem
         </h1>
         <p className="text-zinc-400 text-xs mt-1">
-          Crie ilustrações incríveis, fotos realistas e designs futuristas a partir de descrições em texto com o modelo GPT Image-2.
+          Crie ilustrações incríveis, fotos realistas e designs futuristas a partir de descrições em texto com o modelo Gpt Image-2.
         </p>
       </div>
 
@@ -378,7 +378,7 @@ export default function GenerateImagePage() {
           <div className="glass-panel rounded-card p-5 space-y-2">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider">Dica MAX AI</h3>
             <p className="text-zinc-400 text-xs leading-relaxed">
-              O gerador de imagem utiliza o modelo GPT Image-2 que é otimizado para entender prompts complexos com descrições ricas em detalhes artísticos e fotográficos.
+              O gerador de imagem utiliza o modelo Gpt Image-2 que é otimizado para entender prompts complexos com descrições ricas em detalhes artísticos e fotográficos.
             </p>
           </div>
         </div>
