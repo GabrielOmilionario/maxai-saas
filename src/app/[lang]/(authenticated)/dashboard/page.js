@@ -1007,6 +1007,7 @@ function DashboardContent() {
         {dict.dashboard.disclaimer}
       </p>
     </div>
+  </div>
   )
 
   /* ═══════════════════════════════════════════
