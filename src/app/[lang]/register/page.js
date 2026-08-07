@@ -39,6 +39,8 @@ export default function RegisterPage() {
         let msg = signUpError.message
         if (msg.toLowerCase().includes('user already registered') || msg.toLowerCase().includes('already registered')) {
           msg = 'Este e-mail já está cadastrado.'
+        } else if (msg.toLowerCase().includes('rate limit')) {
+          msg = 'Limite de tentativas excedido. Por favor, tente novamente mais tarde.'
         }
         setError(msg)
       } else {
