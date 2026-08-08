@@ -51,7 +51,7 @@ const MaxLogo = ({ size = 32 }) => (
 /* ──────────────── MODEL CONFIG ──────────────── */
 const MODELS = [
   { key: 'gpt-image', label: 'Gpt Image-2', icon: ImageIcon, accent: 'blue', type: 'image' },
-  { key: 'gemini-3', label: 'Gemini 3 — Texto', icon: MessageSquare, accent: 'orange', type: 'text' },
+  { key: 'gemini-3', label: 'Gemini 3', icon: MessageSquare, accent: 'orange', type: 'text' },
   { key: 'grok-3', label: 'Grok - Vídeo', icon: Video, accent: 'purple', type: 'video' },
   { key: 'veo-3.1-fast', label: 'Veo 3.1 Fast', icon: Video, accent: 'green', type: 'video' },
   { key: 'veo-3.1-lite', label: 'Veo 3.1 Lite', icon: Video, accent: 'teal', type: 'video' },
@@ -959,17 +959,19 @@ function DashboardContent() {
       </div>
 
       {/* Cost estimate */}
-      <div
-        className="flex items-center justify-center gap-2 select-none"
-        style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontWeight: '500' }}
-      >
-        <Coins className="w-3.5 h-3.5" style={{ color: '#A78BFA' }} />
-        <span>
-          {estimatedCost === 'Variável' 
-            ? 'Custo variável baseado no tamanho do texto gerado.' 
-            : <>Esta geração custará <strong style={{ color: '#A78BFA' }}>{estimatedCost}</strong> créditos</>}
-        </span>
-      </div>
+      {activeModel !== 'gemini-3' && (
+        <div
+          className="flex items-center justify-center gap-2 select-none"
+          style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontWeight: '500' }}
+        >
+          <Coins className="w-3.5 h-3.5" style={{ color: '#A78BFA' }} />
+          <span>
+            {estimatedCost === 'Variável' 
+              ? 'Custo variável baseado no tamanho do texto gerado.' 
+              : <>Esta geração custará <strong style={{ color: '#A78BFA' }}>{estimatedCost}</strong> créditos</>}
+          </span>
+        </div>
+      )}
 
       {/* Disclaimer */}
       <p
@@ -1350,35 +1352,46 @@ function DashboardContent() {
                         <div className="flex-1 min-w-0 space-y-3">
                           {msg.status === 'processing' || msg.status === 'pending' ? (
                             /* Loading state */
-                            <div
-                              className="space-y-3"
-                              style={{
-                                padding: '16px 20px',
+                            msg.model_name === 'gemini-3' ? (
+                              <div className="chat-bubble-assistant flex items-center" style={{ 
                                 background: 'rgba(255,255,255,0.03)',
                                 border: '1px solid rgba(255,255,255,0.06)',
                                 borderRadius: '16px',
-                                maxWidth: '360px',
-                              }}
-                            >
-                              <div className="flex items-center gap-2.5">
-                                <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#A78BFA' }} />
-                                <span style={{ fontSize: '13px', fontWeight: '500', color: 'rgba(255,255,255,0.7)' }}>
-                                  {msg.status === 'pending' ? 'Na fila...' : 'Gerando...'}
+                                padding: '12px 20px',
+                              }}>
+                                <span className="animate-pulse text-lg tracking-widest text-white/60">...</span>
+                              </div>
+                            ) : (
+                              <div
+                                className="space-y-3"
+                                style={{
+                                  padding: '16px 20px',
+                                  background: 'rgba(255,255,255,0.03)',
+                                  border: '1px solid rgba(255,255,255,0.06)',
+                                  borderRadius: '16px',
+                                  maxWidth: '360px',
+                                }}
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#A78BFA' }} />
+                                  <span style={{ fontSize: '13px', fontWeight: '500', color: 'rgba(255,255,255,0.7)' }}>
+                                    {msg.status === 'pending' ? 'Na fila...' : 'Gerando...'}
+                                  </span>
+                                </div>
+                                <div
+                                  className="w-full h-1 overflow-hidden"
+                                  style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '999px' }}
+                                >
+                                  <div
+                                    className="h-full animate-pulse-slow"
+                                    style={{ width: '60%', background: 'linear-gradient(90deg, #7C3AED, #A78BFA)', borderRadius: '999px' }}
+                                  />
+                                </div>
+                                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', fontWeight: '500' }}>
+                                  {getModelLabel(msg.model_name)} • Isso pode levar até 2 minutos
                                 </span>
                               </div>
-                              <div
-                                className="w-full h-1 overflow-hidden"
-                                style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '999px' }}
-                              >
-                                <div
-                                  className="h-full animate-pulse-slow"
-                                  style={{ width: '60%', background: 'linear-gradient(90deg, #7C3AED, #A78BFA)', borderRadius: '999px' }}
-                                />
-                              </div>
-                              <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', fontWeight: '500' }}>
-                                {getModelLabel(msg.model_name)} • Isso pode levar até 2 minutos
-                              </span>
-                            </div>
+                            )
                           ) : msg.status === 'failed' ? (
                             /* Error state */
                             <div
@@ -1402,7 +1415,7 @@ function DashboardContent() {
                           ) : (
                             /* Success: media + actions or text */
                             <div className="space-y-3 w-full">
-                              {msg.text && !msg.media_url ? (
+                              {msg.model_name === 'gemini-3' || (msg.text && !msg.media_url) ? (
                                 <div className="chat-bubble-assistant whitespace-pre-wrap" style={{ 
                                   background: 'rgba(255,255,255,0.03)',
                                   border: '1px solid rgba(255,255,255,0.06)',
@@ -1412,7 +1425,7 @@ function DashboardContent() {
                                   fontSize: '14px',
                                   lineHeight: '1.6'
                                 }}>
-                                  {msg.text}
+                                  {msg.text || (msg.status === 'completed' && <span className="animate-pulse text-lg tracking-widest text-white/60">...</span>)}
                                 </div>
                               ) : (
                                 <div
