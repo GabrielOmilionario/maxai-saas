@@ -161,7 +161,8 @@ function DashboardContent() {
     if (!silent) setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/chat/messages?sessionId=${activeSessionId}`)
+      const cacheBuster = new Date().getTime()
+      const res = await fetch(`/api/chat/messages?sessionId=${activeSessionId}&t=${cacheBuster}`)
       if (res.ok) {
         const data = await res.json()
         setMessages(data)
@@ -451,8 +452,11 @@ function DashboardContent() {
             }
           }
           
-          fetchMessages(true)
-          refreshProfile()
+          // Wait briefly before fetching to ensure Supabase finishes saving the stream
+          setTimeout(() => {
+            fetchMessages(true)
+            refreshProfile()
+          }, 800)
         }
       } else {
         let errMessage = 'Erro ao processar mensagem.'

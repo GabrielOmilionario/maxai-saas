@@ -339,7 +339,13 @@ export async function GET(request) {
       }
     }
 
-    return NextResponse.json(messages || [])
+    return NextResponse.json(messages || [], {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    })
   } catch (err) {
     console.error('[MESSAGES-GET] Fatal error:', err)
     return NextResponse.json({ error: 'Erro interno no servidor' }, { status: 500 })
@@ -568,10 +574,16 @@ export async function POST(request) {
             }
           } catch(err) {
             console.error('[GEMINI] Stream error:', err)
+            if (fullText) {
+               await supabaseAdmin.from('chat_messages').update({ text: fullText }).eq('id', assistantMsgId)
+            }
             controller.error(err)
           }
         },
         async cancel() {
+          if (fullText) {
+             await supabaseAdmin.from('chat_messages').update({ text: fullText }).eq('id', assistantMsgId)
+          }
           await reader.cancel()
         }
       })
@@ -579,8 +591,10 @@ export async function POST(request) {
       return new NextResponse(stream, {
         headers: {
           'Content-Type': 'text/plain',
-          'Cache-Control': 'no-cache',
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
           'Connection': 'keep-alive',
+          'Pragma': 'no-cache',
+          'Expires': '0',
         }
       })
     } else if (modelName.includes('grok') || modelName.includes('veo')) {
