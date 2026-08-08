@@ -561,6 +561,13 @@ export async function POST(request) {
             const chunk = decoder.decode(value, { stream: true })
             const lines = chunk.split('\n')
             for (const line of lines) {
+              if (line.startsWith('data: ') && line.includes('[DONE]')) {
+                 if (fullText) {
+                    await supabaseAdmin.from('chat_messages').update({ text: fullText }).eq('id', assistantMsgId)
+                 }
+                 try { controller.close() } catch(e) {}
+                 return
+              }
               if (line.startsWith('data: ') && !line.includes('[DONE]')) {
                  try {
                     const data = JSON.parse(line.substring(6))
