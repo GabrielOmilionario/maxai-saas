@@ -7,23 +7,6 @@ import { useState, useEffect, useRef } from 'react'
    ═══════════════════════════════════════════ */
 const PLANS = [
   {
-    name: 'Free',
-    price: 'R$ 0',
-    period: '',
-    badge: 'Gratuito',
-    description: 'Para testar a plataforma e começar a criar.',
-    credits: '100 créditos de bônus',
-    features: [
-      'Gpt Image-2 (Imagens)',
-      'Grok (Vídeos)',
-      '100 créditos no cadastro',
-      'Sem cartão de crédito',
-    ],
-    highlight: false,
-    cta: 'Começar Grátis',
-    href: 'https://www.maxai.website/pt/register',
-  },
-  {
     name: 'Iniciante',
     price: 'R$ 39,90',
     period: '/mês',
@@ -237,7 +220,6 @@ export default function LandingPage() {
             <a href="#modelos" className="lp-nav-link">Modelos</a>
             <a href="#planos" className="lp-nav-link">Planos</a>
             <a href="#faq" className="lp-nav-link">FAQ</a>
-            <a href="https://www.maxai.website/pt/register" className="lp-cta-btn-small">Começar Grátis</a>
           </nav>
 
           {/* Mobile Hamburger */}
@@ -281,13 +263,6 @@ export default function LandingPage() {
               {item}
             </a>
           ))}
-          <a
-            href="https://www.maxai.website/pt/register"
-            className="lp-cta-btn-small"
-            style={{ marginTop: '12px', fontSize: '16px', padding: '14px 32px' }}
-          >
-            Começar Grátis
-          </a>
         </div>
       )}
 
@@ -636,12 +611,9 @@ export default function LandingPage() {
               Pronto para transformar suas ideias em realidade?
             </h2>
             <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.7', maxWidth: '500px', margin: '0 auto 32px' }}>
-              Comece grátis agora mesmo. Sem cartão de crédito, sem compromisso. 100 créditos de bônus no cadastro.
+              Escolha o plano que melhor atende às suas necessidades e comece a criar imagens e vídeos de alta qualidade hoje mesmo.
             </p>
             <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <a href="https://www.maxai.website/pt/register" className="lp-cta-btn-primary">
-                Criar Minha Conta Grátis →
-              </a>
               <a
                 href="https://wa.me/5511999999999?text=Ol%C3%A1!%20Tenho%20interesse%20no%20MAX%20AI"
                 target="_blank"
