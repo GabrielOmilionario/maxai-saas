@@ -39,7 +39,7 @@ const PLANS = [
     ],
     highlight: false,
     cta: 'Assinar Plano',
-    href: 'https://buy.stripe.com/4gM3cu4bHfUY8200K693y04',
+    href: 'https://pay.cakto.com.br/3bx8rpb',
   },
   {
     name: 'Criador',
@@ -57,7 +57,7 @@ const PLANS = [
     ],
     highlight: true,
     cta: 'Escolher Criador',
-    href: 'https://buy.stripe.com/14AeVcdMh5gkcig1Oa93y05',
+    href: 'https://pay.cakto.com.br/fddfhnb',
   },
   {
     name: 'Empresas',
@@ -75,7 +75,7 @@ const PLANS = [
     ],
     highlight: false,
     cta: 'Escolher Empresas',
-    href: 'https://buy.stripe.com/00wcN40ZvbEIfusgJ493y06',
+    href: 'https://pay.cakto.com.br/32k3und_806240',
   },
 ]
 
@@ -111,6 +111,13 @@ const FAQ_ITEMS = [
 ]
 
 const MODELS = [
+  {
+    name: 'Gemini 3 Flash',
+    type: 'Texto',
+    desc: 'O modelo mais rápido do Google para geração de textos criativos e análise.',
+    icon: '⚡',
+    color: '#F59E0B',
+  },
   {
     name: 'Gpt Image-2',
     type: 'Imagens',
@@ -351,10 +358,7 @@ export default function LandingPage() {
 
           {/* CTAs */}
           <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="https://www.maxai.website/pt/register" className="lp-cta-btn-primary">
-              Começar Grátis →
-            </a>
-            <a href="#planos" className="lp-cta-btn-secondary">
+            <a href="#planos" className="lp-cta-btn-primary">
               Ver Planos
             </a>
           </div>
