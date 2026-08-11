@@ -519,7 +519,7 @@ function DashboardContent() {
   }
 
   const isVideoModel = MODELS.find(m => m.key === activeModel)?.type === 'video'
-  const isAdmin = profile?.email === 'gabrieljesus2030@gmail.com'
+  const isAdmin = ['gabrieljesus2030@gmail.com', 'Isah3469520@gmail.com'].includes(profile?.email)
   const remainingCredits = isAdmin ? '∞' : (profile ? (profile.credit_limit - profile.credit_used) : 100)
   const isWelcome = !activeSessionId && messages.length === 0
 

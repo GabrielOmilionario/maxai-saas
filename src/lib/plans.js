@@ -23,7 +23,7 @@ export async function validatePlanLimits(userId, modelName) {
   
   const userPlanName = (profile.plan || 'Free').trim()
   const userPlanNameLower = userPlanName.toLowerCase()
-  const isAdmin = profile.email === 'gabrieljesus2030@gmail.com'
+  const isAdmin = ['gabrieljesus2030@gmail.com', 'Isah3469520@gmail.com'].includes(profile.email)
   
   if (isAdmin) {
     return { allowed: true, profile }

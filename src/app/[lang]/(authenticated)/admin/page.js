@@ -83,7 +83,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!authLoading) {
-      if (!user || user.email !== 'gabrieljesus2030@gmail.com') {
+      if (!user || !['gabrieljesus2030@gmail.com', 'Isah3469520@gmail.com'].includes(user.email)) {
         router.push('/dashboard')
       } else {
         fetchUsers()
@@ -304,7 +304,7 @@ export default function AdminPage() {
   const activeSubs = users.filter(u => u.plan && u.plan.toLowerCase() !== 'free').length
   const totalMonthlyGens = users.reduce((acc, curr) => acc + (curr.monthly_generations || 0), 0)
 
-  if (authLoading || !user || user.email !== 'gabrieljesus2030@gmail.com') {
+  if (authLoading || !user || !['gabrieljesus2030@gmail.com', 'Isah3469520@gmail.com'].includes(user.email)) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#08080D]">
         <Loader2 className="w-8 h-8 text-brand-purple animate-spin" />
@@ -474,7 +474,7 @@ export default function AdminPage() {
               </thead>
               <tbody className="divide-y divide-white/[0.03]">
                 {filteredUsers.map((u) => {
-                  const isUserAdmin = u.email === 'gabrieljesus2030@gmail.com'
+                  const isUserAdmin = ['gabrieljesus2030@gmail.com', 'Isah3469520@gmail.com'].includes(u.email)
                   const pName = u.plan?.toLowerCase() || 'free'
                   
                   // Progress calculation

@@ -6,7 +6,7 @@ export async function POST(request) {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (authError || !user || user.email !== 'gabrieljesus2030@gmail.com') {
+    if (authError || !user || !['gabrieljesus2030@gmail.com', 'Isah3469520@gmail.com'].includes(user.email)) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 

@@ -135,7 +135,7 @@ export default function Sidebar() {
     return d.toLocaleDateString('pt-BR')
   }
 
-  const isAdmin = profile?.email === 'gabrieljesus2030@gmail.com'
+  const isAdmin = ['gabrieljesus2030@gmail.com', 'Isah3469520@gmail.com'].includes(profile?.email)
   const remainingCredits = isAdmin ? '∞' : (profile ? (profile.credit_limit - profile.credit_used) : 100)
 
   // Auto-open plans modal if user has 0 credits remaining

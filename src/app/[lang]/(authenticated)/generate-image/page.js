@@ -166,7 +166,7 @@ export default function GenerateImagePage() {
     if (!prompt) return
 
     // Block immediately if user has 0 credits remaining (100% used)
-    const isAdmin = profile?.email === 'gabrieljesus2030@gmail.com'
+    const isAdmin = ['gabrieljesus2030@gmail.com', 'Isah3469520@gmail.com'].includes(profile?.email)
     if (!isAdmin && availableCredits <= 0) {
       setPlansModalOpen(true)
       setError('Você consumiu 100% dos seus créditos. Adquira um plano para continuar gerando.')

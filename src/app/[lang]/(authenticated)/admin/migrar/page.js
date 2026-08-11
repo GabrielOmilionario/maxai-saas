@@ -143,7 +143,7 @@ export default function MigratePage() {
 
   // Auth guard
   useEffect(() => {
-    if (!authLoading && (!user || user.email !== 'gabrieljesus2030@gmail.com')) {
+    if (!authLoading && (!user || !['gabrieljesus2030@gmail.com', 'Isah3469520@gmail.com'].includes(user.email))) {
       router.push('/dashboard')
     }
   }, [user, authLoading, router])

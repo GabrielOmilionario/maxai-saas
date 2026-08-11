@@ -71,7 +71,7 @@ export async function POST(request) {
     const profile = planValidation.profile
     const supabaseAdmin = createAdminClient()
 
-    const isAdminUser = profile.email === 'gabrieljesus2030@gmail.com'
+    const isAdminUser = ['gabrieljesus2030@gmail.com', 'Isah3469520@gmail.com'].includes(profile.email)
     const availableCredits = isAdminUser ? 999999 : (profile.credit_limit - profile.credit_used)
     console.log(`[GENERATE-VIDEO] Credits: available=${availableCredits}, cost=${videoCost}, isAdminUser=${isAdminUser}`)
 

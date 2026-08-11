@@ -8,7 +8,7 @@ async function verifyAdmin() {
     data: { user },
     error,
   } = await supabase.auth.getUser()
-  if (error || !user || user.email !== 'gabrieljesus2030@gmail.com') {
+  if (error || !user || !['gabrieljesus2030@gmail.com', 'Isah3469520@gmail.com'].includes(user.email)) {
     return { error: 'Não autorizado', status: 403 }
   }
   return { user }

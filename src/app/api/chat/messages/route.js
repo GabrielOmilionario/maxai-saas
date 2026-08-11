@@ -194,7 +194,7 @@ export async function GET(request) {
                       .eq('id', user.id)
                       .single()
 
-                    if (profile && profile.email !== 'gabrieljesus2030@gmail.com') {
+                    if (profile && !['gabrieljesus2030@gmail.com', 'Isah3469520@gmail.com'].includes(profile.email)) {
                       await supabaseAdmin
                         .from('profiles')
                         .update({ credit_used: Math.max(0, profile.credit_used - refundAmount) })
@@ -312,7 +312,7 @@ export async function GET(request) {
                       .eq('id', user.id)
                       .single()
 
-                    if (profile && profile.email !== 'gabrieljesus2030@gmail.com') {
+                    if (profile && !['gabrieljesus2030@gmail.com', 'Isah3469520@gmail.com'].includes(profile.email)) {
                       await supabaseAdmin
                         .from('profiles')
                         .update({ credit_used: Math.max(0, profile.credit_used - refundAmount) })
@@ -404,7 +404,7 @@ export async function POST(request) {
     const profile = planValidation.profile
     const supabaseAdmin = createAdminClient()
 
-    const isAdminUser = profile.email === 'gabrieljesus2030@gmail.com'
+    const isAdminUser = ['gabrieljesus2030@gmail.com', 'Isah3469520@gmail.com'].includes(profile.email)
     const availableCredits = isAdminUser ? 999999 : (profile.credit_limit - profile.credit_used)
     console.log(`[MESSAGES-POST] Credits: available=${availableCredits}, needed=${cost}, isAdminUser=${isAdminUser}`)
 
