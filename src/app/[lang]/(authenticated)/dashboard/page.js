@@ -1506,8 +1506,7 @@ function DashboardContent() {
                                     },
                                   ]
 
-                                  const isGrok = msg.model_name?.toLowerCase().includes('grok');
-                                  if (msg.media_type === 'video' && msg.external_id && !isGrok) {
+                                  if (msg.media_type === 'video' && msg.external_id) {
                                     actions.push({
                                       title: 'Estender Vídeo',
                                       icon: Sparkles,

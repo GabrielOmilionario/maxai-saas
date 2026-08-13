@@ -103,19 +103,18 @@ export async function GET(request) {
             const isGeminiGenVideo = msg.model_name?.includes('grok') || msg.model_name?.includes('veo')
             if (isGeminiGenVideo) {
               // Video generation status check
-              const isGrok = msg.model_name?.includes('grok')
               const isVeo = msg.model_name?.includes('veo')
-              const apiKey = isGrok ? process.env.REAPI_API_KEY : process.env.GEMINIGEN_API_KEY
+              const apiKey = process.env.GEMINIGEN_API_KEY
               if (apiKey && msg.external_id) {
                 const costMatch = msg.external_id.match(/cost:(\d+)/);
                 const refundAmount = costMatch ? parseInt(costMatch[1]) : 20;
                 const realExternalId = msg.external_id.includes('|id:') ? msg.external_id.split('|id:')[1] : msg.external_id;
 
-                const pollUrl = isGrok ? `https://reapi.ai/api/v1/tasks/${realExternalId}` : `https://api.snapgen.ai/uapi/v1/history/${realExternalId}`;
+                const pollUrl = `https://api.snapgen.ai/uapi/v1/history/${realExternalId}`;
                 console.log(`[POLL-VIDEO] Checking status at: ${pollUrl}`)
 
                 const res = await fetch(pollUrl, {
-                  headers: isGrok ? { 'Authorization': `Bearer ${apiKey}` } : { 'x-api-key': apiKey },
+                  headers: { 'x-api-key': apiKey },
                 })
 
                 const resText = await res.text()
@@ -130,16 +129,12 @@ export async function GET(request) {
                     continue
                   }
 
-                  const taskData = isGrok ? data : (data.data || data)
+                  const taskData = data.data || data
                   const statusVal = taskData.status
                   let videoUrlVal = null
-                  if (isGrok) {
-                    videoUrlVal = taskData.output?.video_urls?.[0];
-                  } else {
-                    videoUrlVal = taskData.video_url || taskData.url || taskData.result_url || taskData.result
-                    if (!videoUrlVal && taskData.generated_video && taskData.generated_video.length > 0) {
-                      videoUrlVal = taskData.generated_video[0].video_url || taskData.generated_video[0].url
-                    }
+                  videoUrlVal = taskData.video_url || taskData.url || taskData.result_url || taskData.result
+                  if (!videoUrlVal && taskData.generated_video && taskData.generated_video.length > 0) {
+                    videoUrlVal = taskData.generated_video[0].video_url || taskData.generated_video[0].url
                   }
 
                   console.log(`[POLL-VIDEO] Generation status=${statusVal} for external_id=${msg.external_id}`)
@@ -606,64 +601,28 @@ export async function POST(request) {
       })
     } else if (modelName.includes('grok') || modelName.includes('veo')) {
       // Call Video API
-      const isGrok = modelName.includes('grok')
       const isVeo = modelName.includes('veo')
-      const apiKey = isGrok ? process.env.REAPI_API_KEY : process.env.GEMINIGEN_API_KEY
+      const apiKey = process.env.GEMINIGEN_API_KEY
       const isExtend = !!extendVideoId
       
       let endpoint
-      if (isGrok) {
-        endpoint = 'https://reapi.ai/api/v1/videos/generations'
-      } else if (isExtend) {
-        endpoint = 'https://api.snapgen.ai/uapi/v1/video-extend/veo'
+      if (isExtend) {
+        endpoint = isVeo ? 'https://api.snapgen.ai/uapi/v1/video-extend/veo' : 'https://api.snapgen.ai/uapi/v1/video-extend/grok'
       } else {
-        endpoint = 'https://api.snapgen.ai/uapi/v1/video-gen/veo'
+        endpoint = isVeo ? 'https://api.snapgen.ai/uapi/v1/video-gen/veo' : 'https://api.snapgen.ai/uapi/v1/video-gen/grok'
       }
 
-      console.log(`[VIDEO-GEN] Endpoint: ${endpoint}, isVeo=${isVeo}, isGrok=${isGrok}, isExtend=${isExtend}`)
+      console.log(`[VIDEO-GEN] Endpoint: ${endpoint}, isVeo=${isVeo}, isExtend=${isExtend}`)
       console.log(`[VIDEO-GEN] API Key present: ${!!apiKey}`)
 
       if (!apiKey) {
         if (!isAdminUser) {
           await supabaseAdmin.from('profiles').update({ credit_used: profile.credit_used }).eq('id', user.id)
         }
-        const missingKey = isGrok ? 'REAPI_API_KEY' : 'GEMINIGEN_API_KEY'
-        return NextResponse.json({ error: `Erro: A chave de API (${missingKey}) não está configurada no servidor.` }, { status: 500 })
+        return NextResponse.json({ error: `Erro: A chave de API (GEMINIGEN_API_KEY) não está configurada no servidor.` }, { status: 500 })
       } else {
         try {
-          let reqBody;
-          let reqHeaders;
-          let formData;
-          
-          if (isGrok) {
-            if (isExtend) {
-              return NextResponse.json({ error: 'Extensão de vídeo não é suportada para o modelo Grok.' }, { status: 400 })
-            }
-            
-            let reapiSize = '16:9';
-            if (aspectRatio === '9:16' || aspectRatio === 'vertical' || aspectRatio === 'portrait') reapiSize = '9:16';
-            else if (aspectRatio === '1:1' || aspectRatio === 'square') reapiSize = '1:1';
-            else if (aspectRatio === '3:2' || aspectRatio === 'horizontal') reapiSize = '3:2';
-            else if (aspectRatio === '2:3') reapiSize = '2:3';
-
-            reqHeaders = {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKey}`
-            };
-            
-            const payload = {
-              model: "grok-imagine-1.0-video",
-              prompt: text,
-              size: reapiSize,
-              duration: parseInt(duration) || 6,
-              quality: resolution === '720p' ? '720p' : '480p'
-            };
-            if (processedAttachments && processedAttachments.length > 0) {
-              payload.image_urls = [processedAttachments[0]];
-            }
-            reqBody = JSON.stringify(payload);
-          } else {
-          formData = new FormData()
+          let formData = new FormData()
           formData.append('prompt', text)
           
           if (isExtend) {
@@ -671,20 +630,25 @@ export async function POST(request) {
             formData.append('ref_history', actualExtendId)
             console.log(`[VIDEO-GEN] Payload (EXTEND): prompt="${text.substring(0, 50)}...", ref_history=${actualExtendId}`)
           } else {
-            // Map aspect ratio for Veo (needs 16:9 / 9:16 format)
             let mappedAspectRatio = aspectRatio || 'landscape'
             if (isVeo) {
               if (mappedAspectRatio === 'landscape') mappedAspectRatio = '16:9'
               else if (mappedAspectRatio === 'portrait' || mappedAspectRatio === 'vertical') mappedAspectRatio = '9:16'
               else if (mappedAspectRatio === 'square') mappedAspectRatio = '1:1'
               else if (mappedAspectRatio !== '9:16' && mappedAspectRatio !== '16:9') mappedAspectRatio = '16:9'
+            } else {
+              if (!['landscape', 'portrait', 'square', 'vertical', 'horizontal'].includes(mappedAspectRatio)) {
+                mappedAspectRatio = 'landscape';
+              }
             }
 
             formData.append('model', modelName)
             formData.append('resolution', resolution || (isVeo ? '720p' : '480p'))
             formData.append('aspect_ratio', mappedAspectRatio)
             formData.append('duration', duration ? String(duration) : (isVeo ? '6' : '10'))
-            if (!isVeo) formData.append('mode', mode || 'custom')
+            formData.append('mode', mode || 'custom')
+            
+            if (!isVeo) formData.append('skip_audio', 'false')
 
             // Reference image
             if (processedAttachments && processedAttachments.length > 0) {
@@ -698,15 +662,13 @@ export async function POST(request) {
             console.log(`[VIDEO-GEN] Payload: prompt="${text.substring(0, 50)}...", model=${modelName}, resolution=${resolution || (isVeo ? '720p' : '480p')}, aspect_ratio=${mappedAspectRatio}, duration=${duration || (isVeo ? '6' : '10')}, hasRefImage=${processedAttachments.length > 0}`)
           }
 
-          } // end isVeo else
-
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), 45000)
 
           const apiRes = await fetch(endpoint, {
             method: 'POST',
-            headers: isGrok ? reqHeaders : { 'x-api-key': apiKey },
-            body: isGrok ? reqBody : formData,
+            headers: { 'x-api-key': apiKey },
+            body: formData,
             signal: controller.signal
           })
           clearTimeout(timeoutId)
@@ -717,7 +679,7 @@ export async function POST(request) {
           if (apiRes.ok) {
             try {
               const data = JSON.parse(responseText)
-              externalId = isGrok ? data.id : data.uuid
+              externalId = data.uuid
               console.log(`[VIDEO-GEN] Success! externalId=${externalId}`)
             } catch (parseErr) {
               console.error(`[VIDEO-GEN] Failed to parse success response:`, parseErr.message)
