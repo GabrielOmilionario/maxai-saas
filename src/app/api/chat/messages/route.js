@@ -367,7 +367,7 @@ export async function POST(request) {
     const modelName = model || 'grok-3'
     const isVideo = modelName.includes('grok') || modelName.includes('veo')
     const isText = modelName.includes('gemini-3')
-    let cost = isText ? 1 : 25 // default for image (GPT Image-2)
+    let cost = isText ? 1 : 20 // default for image (GPT Image-2)
     if (isVideo) {
       if (modelName.includes('veo')) {
         cost = 18
@@ -375,16 +375,16 @@ export async function POST(request) {
         // Grok
         const dur = String(duration)
         if (resolution === '720p') {
-          if (dur === '6') cost = 80
-          else if (dur === '10') cost = 105
-          else if (dur === '15') cost = 130
-          else cost = 80
+          if (dur === '6') cost = 120
+          else if (dur === '10') cost = 200
+          else if (dur === '15') cost = 300
+          else cost = 120
         } else {
           // 480p
-          if (dur === '6') cost = 55
-          else if (dur === '10') cost = 80
-          else if (dur === '15') cost = 105
-          else cost = 55
+          if (dur === '6') cost = 70
+          else if (dur === '10') cost = 110
+          else if (dur === '15') cost = 160
+          else cost = 70
         }
       }
     }

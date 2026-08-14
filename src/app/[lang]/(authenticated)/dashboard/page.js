@@ -530,19 +530,19 @@ function DashboardContent() {
     } else if (activeModel === 'grok-3') {
       const dur = String(videoDuration)
       if (videoResolution === '720p') {
-        if (dur === '6') return 80
-        if (dur === '10') return 105
-        if (dur === '15') return 130
-        return 80
+        if (dur === '6') return 120
+        if (dur === '10') return 200
+        if (dur === '15') return 300
+        return 120
       } else {
         // 480p
-        if (dur === '6') return 55
-        if (dur === '10') return 80
-        if (dur === '15') return 105
-        return 55
+        if (dur === '6') return 70
+        if (dur === '10') return 110
+        if (dur === '15') return 160
+        return 70
       }
     } else {
-      return 25
+      return 20
     }
   }
   const estimatedCost = getEstimatedCost()

@@ -52,14 +52,16 @@ export async function POST(request) {
     } else {
       // Grok
       if (resolution === '720p') {
-        if (String(duration) === '6') videoCost = 80;
-        else if (String(duration) === '10') videoCost = 105;
-        else videoCost = 80;
+        if (String(duration) === '6') videoCost = 120;
+        else if (String(duration) === '10') videoCost = 200;
+        else if (String(duration) === '15') videoCost = 300;
+        else videoCost = 120;
       } else {
         // 480p
-        if (String(duration) === '6') videoCost = 55;
-        else if (String(duration) === '10') videoCost = 80;
-        else videoCost = 55;
+        if (String(duration) === '6') videoCost = 70;
+        else if (String(duration) === '10') videoCost = 110;
+        else if (String(duration) === '15') videoCost = 160;
+        else videoCost = 70;
       }
     }
 
