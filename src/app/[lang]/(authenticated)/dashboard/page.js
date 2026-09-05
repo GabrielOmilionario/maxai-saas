@@ -34,7 +34,8 @@ import {
   Music,
   Code2,
   Wand2,
-  MessageSquare
+  MessageSquare,
+  Clock
 } from 'lucide-react'
 
 /* ──────────────── MAX LOGO ──────────────── */
@@ -221,8 +222,45 @@ function DashboardContent() {
     }
   }, [messages, activeSessionId, fetchMessages, refreshProfile])
 
+  /* ── Image Compression Utility ── */
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = (event) => {
+        const img = new Image()
+        img.src = event.target.result
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          let width = img.width
+          let height = img.height
+          
+          const maxDim = 1024
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width)
+              width = maxDim
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height)
+              height = maxDim
+            }
+          }
+          
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(img, 0, 0, width, height)
+          
+          resolve(canvas.toDataURL('image/jpeg', 0.8))
+        }
+      }
+    })
+  }
+
   /* ── File upload ── */
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -232,14 +270,18 @@ function DashboardContent() {
       return
     }
 
-    const reader = new FileReader()
-    reader.onloadend = () => setAttachments((p) => [...p, reader.result])
-    reader.readAsDataURL(file)
+    try {
+      const compressedUrl = await compressImage(file)
+      setAttachments((p) => [...p, compressedUrl])
+    } catch (err) {
+      console.error('Error compressing image:', err)
+      setError('Erro ao processar imagem.')
+    }
     setModelMenuOpen(false)
   }
 
   /* ── Paste Image ── */
-  const handlePaste = (e) => {
+  const handlePaste = async (e) => {
     const items = e.clipboardData?.items
     if (!items) return
 
@@ -254,9 +296,13 @@ function DashboardContent() {
           return
         }
 
-        const reader = new FileReader()
-        reader.onloadend = () => setAttachments((p) => [...p, reader.result])
-        reader.readAsDataURL(file)
+        try {
+          const compressedUrl = await compressImage(file)
+          setAttachments((p) => [...p, compressedUrl])
+        } catch (err) {
+          console.error('Error compressing pasted image:', err)
+          setError('Erro ao processar imagem colada.')
+        }
         break // Stop after first image paste
       }
     }
@@ -1486,8 +1532,10 @@ function DashboardContent() {
                               </div>
                               )}
 
-                              {/* Action bar */}
-                              <div className="flex items-center gap-1">
+                              {/* Action bar and Metadata */}
+                              <div className="flex flex-wrap items-center justify-between gap-3 mt-1 w-full">
+                                {/* Actions */}
+                                <div className="flex items-center gap-1">
                                 {(() => {
                                   const actions = [
                                     {
@@ -1553,6 +1601,21 @@ function DashboardContent() {
                                     </button>
                                   ))
                                 })()}
+                                </div>
+
+                                {/* Metadata */}
+                                {msg.external_id && msg.external_id.includes('cost:') && (
+                                  <div className="flex items-center gap-3 text-[11px] text-zinc-500 font-medium px-1">
+                                    <span className="flex items-center gap-1.5 bg-zinc-900/50 py-1 px-2.5 rounded-full border border-zinc-800" title="Custo da geração">
+                                      <Coins className="w-3 h-3 text-brand-purple" />
+                                      {msg.external_id.match(/cost:(\d+)/)?.[1] || 0} créditos
+                                    </span>
+                                    <span className="flex items-center gap-1.5 bg-zinc-900/50 py-1 px-2.5 rounded-full border border-zinc-800" title="Horário">
+                                      <Clock className="w-3 h-3 text-zinc-400" />
+                                      {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}
