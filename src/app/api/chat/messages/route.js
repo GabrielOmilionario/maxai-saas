@@ -609,7 +609,7 @@ export async function POST(request) {
       if (isExtend) {
         endpoint = isVeo ? 'https://api.snapgen.ai/uapi/v1/video-extend/veo' : 'https://api.snapgen.ai/uapi/v1/video-extend/grok'
       } else {
-        endpoint = isVeo ? 'https://api.snapgen.ai/uapi/v1/video-gen/veo' : 'https://api.snapgen.ai/uapi/v1/video-gen/grok'
+        endpoint = isVeo ? 'https://api.snapgen.ai/uapi/v1/video-gen/veo' : 'https://api.snapgen.ai/uapi/v1/video-gen/grok-lower'
       }
 
       console.log(`[VIDEO-GEN] Endpoint: ${endpoint}, isVeo=${isVeo}, isExtend=${isExtend}`)
@@ -642,7 +642,7 @@ export async function POST(request) {
               }
             }
 
-            formData.append('model', modelName)
+            if (isVeo) formData.append('model', modelName)
             formData.append('resolution', resolution || (isVeo ? '720p' : '480p'))
             formData.append('aspect_ratio', mappedAspectRatio)
             formData.append('duration', duration ? String(duration) : (isVeo ? '6' : '10'))
