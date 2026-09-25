@@ -66,9 +66,17 @@ export async function POST(request) {
         return NextResponse.json({ message: 'Already processed' }, { status: 200 });
       }
 
-      // Non-terminal status ('processing', 'error', 'user_not_resolved', etc.)
-      // Allow retry by reusing the existing record ID and resetting status
-      console.log(`[PerfectPay] Retrying event ${transactionCode}/${eventType} from status: ${existingEvent.status}`);
+      if (existingEvent.status === 'processing') {
+        // Another request is actively processing this event RIGHT NOW.
+        // Returning 409 forces Perfect Pay to retry later, after the active request finishes.
+        // This prevents two requests from processing the same event in parallel.
+        console.warn(`[PerfectPay] Event ${transactionCode}/${eventType} is currently being processed by another request. Returning 409 to trigger retry.`);
+        return NextResponse.json({ message: 'Event currently being processed. Please retry.' }, { status: 409 });
+      }
+
+      // Non-terminal, non-processing status ('error', 'user_not_resolved', 'error_creating_user')
+      // Previous attempt failed and is safe to retry — no parallel request is active.
+      console.log(`[PerfectPay] Retrying failed event ${transactionCode}/${eventType} from status: ${existingEvent.status}`);
       await supabaseAdmin
         .from('processed_webhooks')
         .update({ status: 'processing', error_message: null, processed_at: new Date().toISOString() })
@@ -106,10 +114,11 @@ export async function POST(request) {
       .single();
 
     if (insertError) {
-      // Concurrent request already inserted this record
-      // Wait briefly and re-check: the other request may have already completed it
-      console.warn('[PerfectPay] Concurrent insert blocked:', insertError.message);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // UNIQUE constraint blocked this insert — a concurrent request is actively processing.
+      // Wait briefly: if the concurrent request finishes in time, we can safely return 200.
+      // If it is still running (status = 'processing'), return 409 so Perfect Pay retries later.
+      console.warn('[PerfectPay] Concurrent insert blocked by UNIQUE constraint:', insertError.message);
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       const { data: raceEvent } = await supabaseAdmin
         .from('processed_webhooks')
@@ -120,11 +129,16 @@ export async function POST(request) {
         .single();
 
       if (raceEvent && TERMINAL_STATUSES.includes(raceEvent.status)) {
+        // The concurrent request finished successfully — acknowledge without retry
+        console.log(`[PerfectPay] Concurrent request completed (${raceEvent.status}). Returning 200.`);
         return NextResponse.json({ message: 'Already processed by concurrent request' }, { status: 200 });
       }
 
-      // Still processing or error — return 200 to avoid Perfect Pay retrying too fast
-      return NextResponse.json({ message: 'Concurrent processing in progress' }, { status: 200 });
+      // Concurrent request is still running or failed — return 409 so Perfect Pay retries.
+      // If Request A succeeds later, the retry will find status='completed' and return 200.
+      // If Request A fails, the retry will find status='error' and reprocess.
+      console.warn('[PerfectPay] Concurrent request still running or failed. Returning 409 to trigger retry.');
+      return NextResponse.json({ message: 'Conflict: event being processed concurrently. Please retry.' }, { status: 409 });
     }
 
     return await processWebhookEvent(
