@@ -49,21 +49,25 @@ export async function GET(request) {
             break; // Sub is no longer active or has no more cycles scheduled
           }
 
-          const nextDate = new Date(sub.next_credit_date);
-          if (nextDate > now || sub.current_cycle >= sub.contract_months) {
-             // If contract is finished, just ensure it's marked expired
-             if (sub.current_cycle >= sub.contract_months) {
-                 await supabaseAdmin.from('subscriptions').update({
-                   status: 'expired',
-                   next_credit_date: null,
-                   updated_at: new Date().toISOString()
-                 }).eq('id', sub.id);
-             }
-             break; // Caught up to present date or contract finished
+          // Compute next cycle number first
+          const nextCycleNumber = sub.current_cycle + 1;
+
+          // If next cycle would exceed contract length, mark expired and stop
+          if (nextCycleNumber > sub.contract_months) {
+            await supabaseAdmin.from('subscriptions').update({
+              status: 'expired',
+              next_credit_date: null,
+              updated_at: new Date().toISOString()
+            }).eq('id', sub.id);
+            break;
           }
 
-          const nextCycleNumber = sub.current_cycle + 1;
-          
+          // If next scheduled date is still in the future, nothing to do yet
+          const nextDate = new Date(sub.next_credit_date);
+          if (nextDate > now) {
+            break;
+          }
+
           console.log(`[Cron] Processing delayed/due cycle ${nextCycleNumber} for sub ${sub.id}`);
           
           await processCreditCycleAtomic(
@@ -72,7 +76,7 @@ export async function GET(request) {
             sub.user_id, 
             nextCycleNumber, 
             sub.credits_per_cycle, 
-            sub.transaction_code // Provider tracking
+            sub.transaction_code
           );
 
           processedCount++;

@@ -95,7 +95,7 @@ BEGIN
     END IF;
 
     -- 2. Validar o usuário, a assinatura e suas regras de negócio
-    -- Utilizamos FOR UPDATE para garantir row-level locking da assinatura até a transação acabar
+    -- FOR UPDATE garante row-level lock da assinatura até o fim da transação (proteção contra concorrência)
     SELECT * INTO v_sub FROM public.subscriptions WHERE id = p_subscription_id FOR UPDATE;
     
     IF NOT FOUND THEN
@@ -116,6 +116,11 @@ BEGIN
 
     IF p_credits != v_sub.credits_per_cycle THEN
         RAISE EXCEPTION 'Falha: O valor dos créditos (%) difere da configuração oficial desta assinatura (%).', p_credits, v_sub.credits_per_cycle;
+    END IF;
+
+    -- 3. Validar que o ciclo não excede o contrato (proteção crítica contra edge case de concorrência)
+    IF p_cycle_number > v_sub.contract_months THEN
+        RAISE EXCEPTION 'Falha: O ciclo solicitado (%) excede o total de meses contratados (%). Nenhum crédito adicional será concedido.', p_cycle_number, v_sub.contract_months;
     END IF;
 
     -- 3. Inserir o ciclo. 
