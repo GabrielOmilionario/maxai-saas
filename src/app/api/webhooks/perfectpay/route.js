@@ -7,6 +7,9 @@ const PERFECTPAY_PLANS = {
   'PPLQQQHME': { id: 'annual', months: 12, credits: 6000 }
 };
 
+// Statuses that are definitively terminal — retry is NOT allowed
+const TERMINAL_STATUSES = ['completed', 'ignored', 'duplicate_subscription', 'unknown_product', 'missing_email'];
+
 export async function POST(request) {
   try {
     const payload = await request.json();
@@ -20,39 +23,74 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Payload Sanitization
+    // Payload Sanitization — never persist the token
     const safePayload = { ...payload };
     if (safePayload.token) safePayload.token = 'REDACTED';
 
-    const transactionCode = payload.code || 'unknown_transaction';
+    const transactionCode = payload.code || null;
     const statusEnum = payload.sale_status_enum;
     const customerEmail = payload.customer?.email || payload.email;
     const productId = payload.product?.code || payload.product?.id || payload.product || 'unknown_product';
     const eventId = payload.id || null;
+
+    // event_type is always constructed from statusEnum — never null
     const eventType = `status_${statusEnum}`;
 
     console.log(`[PerfectPay] Received webhook: Tx: ${transactionCode}, Status: ${statusEnum}, Product: ${productId}, Email: ${customerEmail}`);
 
-    if (transactionCode === 'unknown_transaction') {
+    if (!transactionCode) {
       return NextResponse.json({ message: 'Missing transaction code' }, { status: 400 });
     }
 
     const supabaseAdmin = createAdminClient();
 
-    // 2. Idempotency Check on Webhook processing
+    // ─────────────────────────────────────────────────────────────────
+    // 2. IDEMPOTENCY CHECK — Estratégia B: estados com retry seguro
+    //
+    // TERMINAL: se já foi processado com sucesso, ignorar silenciosamente.
+    // RETRYABLE: se falhou anteriormente (error, processing, user_not_resolved,
+    //            error_creating_user), permitir nova tentativa de processamento.
+    // ─────────────────────────────────────────────────────────────────
     const { data: existingEvent } = await supabaseAdmin
       .from('processed_webhooks')
-      .select('id')
+      .select('id, status')
       .eq('provider', 'perfectpay')
       .eq('transaction_code', transactionCode)
       .eq('event_type', eventType)
       .single();
 
     if (existingEvent) {
-      return NextResponse.json({ message: 'Already processed' }, { status: 200 });
+      if (TERMINAL_STATUSES.includes(existingEvent.status)) {
+        // Already successfully processed — safe to acknowledge and ignore
+        console.log(`[PerfectPay] Event ${transactionCode}/${eventType} already terminal (${existingEvent.status}). Ignoring.`);
+        return NextResponse.json({ message: 'Already processed' }, { status: 200 });
+      }
+
+      // Non-terminal status ('processing', 'error', 'user_not_resolved', etc.)
+      // Allow retry by reusing the existing record ID and resetting status
+      console.log(`[PerfectPay] Retrying event ${transactionCode}/${eventType} from status: ${existingEvent.status}`);
+      await supabaseAdmin
+        .from('processed_webhooks')
+        .update({ status: 'processing', error_message: null, processed_at: new Date().toISOString() })
+        .eq('id', existingEvent.id);
+
+      return await processWebhookEvent(
+        supabaseAdmin,
+        existingEvent.id,
+        statusEnum,
+        transactionCode,
+        customerEmail,
+        productId,
+        eventId,
+        safePayload
+      );
     }
 
-    // Insert atomic lock
+    // ─────────────────────────────────────────────────────────────────
+    // 3. FIRST ATTEMPT: Insert with 'processing' status
+    //    If two simultaneous requests race here, the UNIQUE constraint
+    //    blocks the second — it will hit the retry branch above.
+    // ─────────────────────────────────────────────────────────────────
     const { data: newEvent, error: insertError } = await supabaseAdmin
       .from('processed_webhooks')
       .insert([{
@@ -68,118 +106,37 @@ export async function POST(request) {
       .single();
 
     if (insertError) {
-      console.error('[PerfectPay] Idempotency constraint triggered:', insertError);
-      return NextResponse.json({ message: 'Already processing or processed' }, { status: 200 });
-    }
-    
-    const eventRecordId = newEvent.id;
+      // Concurrent request already inserted this record
+      // Wait briefly and re-check: the other request may have already completed it
+      console.warn('[PerfectPay] Concurrent insert blocked:', insertError.message);
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Handle irrelevant statuses
-    if (statusEnum !== 2 && statusEnum !== 6 && statusEnum !== 7) {
-      await markWebhookProcessed(supabaseAdmin, eventRecordId, 'ignored');
-      return NextResponse.json({ message: 'Status ignored' }, { status: 200 });
-    }
+      const { data: raceEvent } = await supabaseAdmin
+        .from('processed_webhooks')
+        .select('id, status')
+        .eq('provider', 'perfectpay')
+        .eq('transaction_code', transactionCode)
+        .eq('event_type', eventType)
+        .single();
 
-    // Validate Product Map for approved purchases
-    const planConfig = PERFECTPAY_PLANS[productId];
-    if (!planConfig && statusEnum === 2) {
-      console.warn(`[PerfectPay] Unknown Product ID: ${productId}`);
-      await markWebhookProcessed(supabaseAdmin, eventRecordId, 'unknown_product', 'Product ID not recognized');
-      return NextResponse.json({ error: 'Unknown product' }, { status: 400 }); 
-    }
-
-    if (!customerEmail) {
-      await markWebhookProcessed(supabaseAdmin, eventRecordId, 'missing_email', 'No customer email provided');
-      return NextResponse.json({ error: 'Missing customer email' }, { status: 400 });
-    }
-
-    // 4. Resolve User
-    let userId = null;
-    const { data: existingProfile } = await supabaseAdmin
-      .from('profiles')
-      .select('id, plan, credit_limit')
-      .eq('email', customerEmail)
-      .single();
-
-    if (existingProfile) {
-      userId = existingProfile.id;
-    } else if (statusEnum === 2) {
-      // Create user
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: customerEmail,
-        password: 'maxai2026',
-        email_confirm: true,
-        user_metadata: { plan: planConfig.id }
-      });
-
-      if (authError) {
-        if (!authError.message.includes('already registered')) {
-          console.error('[PerfectPay] Error creating user:', authError);
-          await markWebhookProcessed(supabaseAdmin, eventRecordId, 'error_creating_user', authError.message);
-          return NextResponse.json({ error: 'User creation failed' }, { status: 500 });
-        } else {
-          // Fallback if profile is missing but auth exists
-          console.warn('[PerfectPay] Auth user exists but no profile. Fetching user ID manually...');
-          const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
-          const found = usersData?.users?.find(u => u.email === customerEmail);
-          if (found) {
-             userId = found.id;
-             await supabaseAdmin.from('profiles').insert([{
-               id: userId,
-               email: customerEmail,
-               plan: planConfig.id,
-               credit_limit: 0,
-               credit_used: 0
-             }]);
-          }
-        }
-      } else {
-        userId = authData.user.id;
-        await supabaseAdmin.from('profiles').insert([{
-          id: userId,
-          email: customerEmail,
-          plan: planConfig.id,
-          credit_limit: 0,
-          credit_used: 0
-        }]);
+      if (raceEvent && TERMINAL_STATUSES.includes(raceEvent.status)) {
+        return NextResponse.json({ message: 'Already processed by concurrent request' }, { status: 200 });
       }
+
+      // Still processing or error — return 200 to avoid Perfect Pay retrying too fast
+      return NextResponse.json({ message: 'Concurrent processing in progress' }, { status: 200 });
     }
 
-    if (!userId) {
-      await markWebhookProcessed(supabaseAdmin, eventRecordId, 'user_not_resolved', 'User ID could not be found or created');
-      return NextResponse.json({ error: 'User resolution failed' }, { status: 500 });
-    }
-    
-    await supabaseAdmin.from('processed_webhooks').update({ user_id: userId }).eq('id', eventRecordId);
-
-    // 5. Handle Business Logic
-    if (statusEnum === 2) {
-      try {
-        await handleApprovedPurchase(supabaseAdmin, userId, transactionCode, planConfig, productId);
-        await markWebhookProcessed(supabaseAdmin, eventRecordId, 'completed');
-      } catch (err) {
-        console.error('[PerfectPay] Error handling approved purchase:', err);
-        // If it fails with unique_provider_transaction, it's a concurrent duplicate request passing previous checks
-        if (err.code === '23505') {
-            await markWebhookProcessed(supabaseAdmin, eventRecordId, 'duplicate_subscription');
-        } else {
-            await markWebhookProcessed(supabaseAdmin, eventRecordId, 'error', err.message);
-            return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
-        }
-      }
-    } else if (statusEnum === 6) {
-      // 6 = Cancelled (User cancelled future renewals)
-      // Do not delete current access, just mark renewal_canceled
-      await handleCancellationRenewal(supabaseAdmin, userId, transactionCode);
-      await markWebhookProcessed(supabaseAdmin, eventRecordId, 'completed');
-    } else if (statusEnum === 7) {
-      // 7 = Refunded (Reembolso)
-      // Revoke future access completely and immediately
-      await handleRefund(supabaseAdmin, userId, transactionCode);
-      await markWebhookProcessed(supabaseAdmin, eventRecordId, 'completed');
-    }
-
-    return NextResponse.json({ message: 'Processed successfully' }, { status: 200 });
+    return await processWebhookEvent(
+      supabaseAdmin,
+      newEvent.id,
+      statusEnum,
+      transactionCode,
+      customerEmail,
+      productId,
+      eventId,
+      safePayload
+    );
 
   } catch (error) {
     console.error('[PerfectPay Webhook] Critical Error:', error);
@@ -187,25 +144,134 @@ export async function POST(request) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Core processing function — separated so both first-attempt and retry paths
+// share the exact same logic without code duplication
+// ─────────────────────────────────────────────────────────────────────────────
+async function processWebhookEvent(supabaseAdmin, eventRecordId, statusEnum, transactionCode, customerEmail, productId, eventId, safePayload) {
+  // Handle irrelevant statuses
+  if (statusEnum !== 2 && statusEnum !== 6 && statusEnum !== 7) {
+    await markWebhookProcessed(supabaseAdmin, eventRecordId, 'ignored');
+    return NextResponse.json({ message: 'Status ignored' }, { status: 200 });
+  }
+
+  // Validate Product Map for approved purchases
+  const planConfig = PERFECTPAY_PLANS[productId];
+  if (!planConfig && statusEnum === 2) {
+    console.warn(`[PerfectPay] Unknown Product ID: ${productId}`);
+    await markWebhookProcessed(supabaseAdmin, eventRecordId, 'unknown_product', 'Product ID not recognized');
+    return NextResponse.json({ error: 'Unknown product' }, { status: 400 });
+  }
+
+  if (!customerEmail) {
+    await markWebhookProcessed(supabaseAdmin, eventRecordId, 'missing_email', 'No customer email provided');
+    return NextResponse.json({ error: 'Missing customer email' }, { status: 400 });
+  }
+
+  // Resolve User
+  let userId = null;
+  const { data: existingProfile } = await supabaseAdmin
+    .from('profiles')
+    .select('id, plan, credit_limit')
+    .eq('email', customerEmail)
+    .single();
+
+  if (existingProfile) {
+    userId = existingProfile.id;
+  } else if (statusEnum === 2) {
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: customerEmail,
+      password: 'maxai2026',
+      email_confirm: true,
+      user_metadata: { plan: planConfig.id }
+    });
+
+    if (authError) {
+      if (!authError.message.includes('already registered')) {
+        console.error('[PerfectPay] Error creating user:', authError);
+        await markWebhookProcessed(supabaseAdmin, eventRecordId, 'error_creating_user', authError.message);
+        return NextResponse.json({ error: 'User creation failed' }, { status: 500 });
+      } else {
+        // Auth user exists but profile doesn't — find and sync
+        console.warn('[PerfectPay] Auth user exists but no profile. Fetching user ID...');
+        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+        const found = usersData?.users?.find(u => u.email === customerEmail);
+        if (found) {
+          userId = found.id;
+          await supabaseAdmin.from('profiles').insert([{
+            id: userId,
+            email: customerEmail,
+            plan: planConfig.id,
+            credit_limit: 0,
+            credit_used: 0
+          }]);
+        }
+      }
+    } else {
+      userId = authData.user.id;
+      await supabaseAdmin.from('profiles').insert([{
+        id: userId,
+        email: customerEmail,
+        plan: planConfig.id,
+        credit_limit: 0,
+        credit_used: 0
+      }]);
+    }
+  }
+
+  if (!userId) {
+    await markWebhookProcessed(supabaseAdmin, eventRecordId, 'user_not_resolved', 'User ID could not be found or created');
+    return NextResponse.json({ error: 'User resolution failed' }, { status: 500 });
+  }
+
+  await supabaseAdmin.from('processed_webhooks').update({ user_id: userId }).eq('id', eventRecordId);
+
+  // Handle Business Logic
+  if (statusEnum === 2) {
+    try {
+      await handleApprovedPurchase(supabaseAdmin, userId, transactionCode, planConfig, productId);
+      // Only mark completed AFTER all operations succeed
+      await markWebhookProcessed(supabaseAdmin, eventRecordId, 'completed');
+    } catch (err) {
+      console.error('[PerfectPay] Error handling approved purchase:', err);
+      if (err.code === '23505') {
+        // DB-level unique constraint: duplicate subscription attempt
+        await markWebhookProcessed(supabaseAdmin, eventRecordId, 'duplicate_subscription', err.message);
+      } else {
+        // Retryable error — mark as 'error' so next Perfect Pay retry can re-attempt
+        await markWebhookProcessed(supabaseAdmin, eventRecordId, 'error', err.message);
+        return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
+      }
+    }
+  } else if (statusEnum === 6) {
+    await handleCancellationRenewal(supabaseAdmin, userId, transactionCode);
+    await markWebhookProcessed(supabaseAdmin, eventRecordId, 'completed');
+  } else if (statusEnum === 7) {
+    await handleRefund(supabaseAdmin, userId, transactionCode);
+    await markWebhookProcessed(supabaseAdmin, eventRecordId, 'completed');
+  }
+
+  return NextResponse.json({ message: 'Processed successfully' }, { status: 200 });
+}
+
 async function markWebhookProcessed(supabase, id, status, errorMessage = null) {
-  await supabase.from('processed_webhooks').update({ 
-      status, 
-      error_message: errorMessage,
-      processed_at: new Date().toISOString()
+  await supabase.from('processed_webhooks').update({
+    status,
+    error_message: errorMessage,
+    processed_at: new Date().toISOString()
   }).eq('id', id);
 }
 
-// --------------------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 // BUSINESS LOGIC
-// --------------------------------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function handleApprovedPurchase(supabase, userId, transactionCode, planConfig, productId) {
   const now = new Date();
   const endDate = new Date(now);
   endDate.setMonth(endDate.getMonth() + planConfig.months);
 
-  // 1. Create Subscription
-  // Unique constraint handles duplicates automatically
+  // UNIQUE(provider, transaction_code) prevents double subscription at DB level
   const { data: newSub, error: subError } = await supabase.from('subscriptions').insert([{
     user_id: userId,
     provider: 'perfectpay',
@@ -220,19 +286,19 @@ async function handleApprovedPurchase(supabase, userId, transactionCode, planCon
     contract_months: planConfig.months,
     credits_per_cycle: planConfig.credits,
     current_cycle: 1,
-    next_credit_date: now.toISOString(), // Cycle 1 is immediately due
+    next_credit_date: now.toISOString(),
   }]).select('id').single();
 
   if (subError) {
     throw subError;
   }
 
-  // 2. Process Cycle 1 immediately
+  // Cycle 1 is processed immediately via atomic RPC
   await processCreditCycleAtomic(supabase, newSub.id, userId, 1, planConfig.credits, transactionCode);
 }
 
 async function handleCancellationRenewal(supabase, userId, transactionCode) {
-  // Status 6: User cancelled renewal, but current period remains active.
+  // Status 6: cancel future renewal only — current period stays active
   await supabase.from('subscriptions')
     .update({ renewal_canceled: true, updated_at: new Date().toISOString() })
     .eq('user_id', userId)
@@ -240,44 +306,48 @@ async function handleCancellationRenewal(supabase, userId, transactionCode) {
 }
 
 async function handleRefund(supabase, userId, transactionCode) {
-  // Status 7: Refunded. Contract is terminated immediately.
+  // Status 7: immediate contract termination
   await supabase.from('subscriptions')
-    .update({ 
-        status: 'refunded', 
-        next_credit_date: null, 
-        updated_at: new Date().toISOString() 
+    .update({
+      status: 'refunded',
+      next_credit_date: null,
+      updated_at: new Date().toISOString()
     })
     .eq('user_id', userId)
     .eq('transaction_code', transactionCode);
 }
 
-// Internal function to process a specific cycle atomically
+// Exported so the cron can reuse this function
 export async function processCreditCycleAtomic(supabase, subscriptionId, userId, cycleNumber, creditsAmount, transactionCode = null) {
-  // Call the atomic RPC to grant credits and log the cycle
+  // Atomic RPC: INSERT credit_cycles + UPDATE profiles.credit_limit in one transaction
   const { error: rpcError } = await supabase.rpc('grant_subscription_credits', {
-      p_user_id: userId,
-      p_subscription_id: subscriptionId,
-      p_cycle_number: cycleNumber,
-      p_credits: creditsAmount,
-      p_scheduled_date: new Date().toISOString(),
-      p_transaction_code: transactionCode
+    p_user_id: userId,
+    p_subscription_id: subscriptionId,
+    p_cycle_number: cycleNumber,
+    p_credits: creditsAmount,
+    p_scheduled_date: new Date().toISOString(),
+    p_transaction_code: transactionCode
   });
 
   if (rpcError) {
-      console.error(`[PerfectPay] RPC Error recording credit cycle ${cycleNumber}:`, rpcError);
-      throw rpcError;
+    console.error(`[PerfectPay] RPC Error on cycle ${cycleNumber}:`, rpcError);
+    throw rpcError;
   }
 
   console.log(`[PerfectPay] Granted ${creditsAmount} credits atomically to user ${userId} for cycle ${cycleNumber}`);
 
-  // Update subscription next_credit_date
-  const { data: sub } = await supabase.from('subscriptions').select('next_credit_date, contract_months').eq('id', subscriptionId).single();
-  
+  // Update next_credit_date strictly based on PREVIOUS scheduled date (not now())
+  const { data: sub } = await supabase
+    .from('subscriptions')
+    .select('next_credit_date, contract_months')
+    .eq('id', subscriptionId)
+    .single();
+
   if (sub && cycleNumber < sub.contract_months) {
-    // Next credit date is STRICTLY previous date + 1 month (to handle delayed crons correctly)
+    // Strictly: previous date + 1 month — safe against delayed crons
     const nextDate = new Date(sub.next_credit_date);
     nextDate.setMonth(nextDate.getMonth() + 1);
-    
+
     await supabase.from('subscriptions').update({
       current_cycle: cycleNumber,
       next_credit_date: nextDate.toISOString(),
@@ -285,7 +355,7 @@ export async function processCreditCycleAtomic(supabase, subscriptionId, userId,
       updated_at: new Date().toISOString()
     }).eq('id', subscriptionId);
   } else {
-    // Contract finished
+    // Contract exhausted
     await supabase.from('subscriptions').update({
       current_cycle: cycleNumber,
       next_credit_date: null,
