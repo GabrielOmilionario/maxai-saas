@@ -13,11 +13,14 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Safe Logging of Event (to prevent duplicate processing later)
-    // For now, we just log the event basic info to console
-    const transactionId = payload.transaction || payload.code || 'unknown_transaction';
+    // 2. Safe Logging of Event & Payload Parsing
+    // Perfect Pay uses 'code' for the unique transaction ID
+    // and 'sale_status_enum' for the status (e.g., 2 = Approved)
+    const transactionId = payload.code || 'unknown_transaction';
+    const statusEnum = payload.sale_status_enum;
+    const customerEmail = payload.customer?.email || payload.email || 'unknown_email';
     
-    console.log(`[PerfectPay Webhook] Valid event received! Transaction: ${transactionId}`);
+    console.log(`[PerfectPay Webhook] Valid event received! Transaction: ${transactionId}, StatusEnum: ${statusEnum}, Email: ${customerEmail}`);
     
     // Future Implementation: Idempotency check
     // 1. Check if transaction/event exists in database (e.g., Supabase)
