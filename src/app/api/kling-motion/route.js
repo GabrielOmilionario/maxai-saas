@@ -11,6 +11,11 @@ export const maxDuration = 60
 // Inicia uma geração Kling 3.0 Motion Control
 // ─────────────────────────────────────────────
 export async function POST(request) {
+  return NextResponse.json(
+    { error: 'A ferramenta Kling 3.0 Motion Control estará disponível em breve. Novas gerações estão temporariamente pausadas.' },
+    { status: 503 }
+  )
+
   const supabase = await createClient()
 
   // 1. Autenticação

@@ -394,6 +394,20 @@ export default function KlingMotionPage() {
         </div>
       )}
 
+      {/* ── Coming soon message ── */}
+      <div
+        className="flex items-start gap-3 p-4 rounded-2xl mb-6 animate-fade-in"
+        style={{
+          background: 'rgba(245,158,11,0.08)',
+          border: '1px solid rgba(245,158,11,0.2)',
+        }}
+      >
+        <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" style={{ color: '#f59e0b' }} />
+        <p style={{ fontSize: '13px', color: '#fcd34d', lineHeight: '1.5', flex: 1 }}>
+          <strong>Em breve!</strong> A ferramenta Kling 3.0 Motion Control estará disponível em breve. Novas gerações estão temporariamente pausadas para ajustes.
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
         {/* ── Main form ── */}
@@ -818,37 +832,24 @@ export default function KlingMotionPage() {
 
           {/* ── Submit button ── */}
           <button
-            type="submit"
-            disabled={loading || !imageFile || !videoFile || !hasEnoughCredits}
-            className="w-full font-bold text-white cursor-pointer transition-all"
+            type="button"
+            disabled={true}
+            className="w-full font-bold text-white cursor-not-allowed transition-all"
             style={{
               height: '52px',
               borderRadius: '16px',
-              background: loading || !imageFile || !videoFile || !hasEnoughCredits
-                ? 'rgba(255,255,255,0.05)'
-                : 'linear-gradient(135deg, #7C3AED, #5B21B6)',
+              background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(124,58,237,0.3)',
               fontSize: '14px',
               fontWeight: '700',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              opacity: loading || !imageFile || !videoFile || !hasEnoughCredits ? 0.5 : 1,
-              boxShadow: !loading && imageFile && videoFile && hasEnoughCredits
-                ? '0 0 24px rgba(124,58,237,0.25)' : 'none',
+              opacity: 0.5,
+              boxShadow: 'none',
               transition: 'all 0.2s',
             }}
           >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Gerando vídeo...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                Gerar Vídeo
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
+            <Sparkles className="w-4 h-4" />
+            Em breve
           </button>
         </form>
 
