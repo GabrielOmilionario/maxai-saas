@@ -17,7 +17,8 @@ import {
   ChevronRight,
   Plus,
   ShieldCheck,
-  Clock
+  Clock,
+  Film
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { PLANS } from '@/lib/plans-meta'
@@ -55,6 +56,7 @@ export default function Sidebar() {
   const [isDeleting, setIsDeleting] = useState(null)
 
   const isHistoryPage = pathname?.includes('/history')
+  const isKlingPage = pathname?.includes('/kling-motion')
 
   /* ── Fetch sessions ── */
   const fetchSessions = async () => {
@@ -256,6 +258,59 @@ export default function Sidebar() {
             )
           })}
         </div>
+      </div>
+
+      {/* ── Ferramentas ── */}
+      <div className="px-4 pb-2 shrink-0">
+        <p
+          className="uppercase tracking-wider font-bold px-1 pb-2 pt-1"
+          style={{ fontSize: '9px', color: 'rgba(255,255,255,0.25)', letterSpacing: '0.1em' }}
+        >
+          Ferramentas
+        </p>
+        <button
+          onClick={() => {
+            router.push('/kling-motion')
+            if (window.innerWidth < 768) setIsOpen(false)
+          }}
+          className="flex items-center gap-2.5 w-full text-left cursor-pointer"
+          style={{
+            padding: '8px 10px',
+            borderRadius: '10px',
+            fontSize: '12px',
+            fontWeight: isKlingPage ? '600' : '500',
+            transition: 'all 0.15s ease',
+            background: isKlingPage ? 'rgba(124,58,237,0.1)' : 'transparent',
+            color: isKlingPage ? '#A78BFA' : 'rgba(255,255,255,0.45)',
+            border: isKlingPage ? '1px solid rgba(124,58,237,0.2)' : '1px solid transparent',
+          }}
+          onMouseEnter={e => {
+            if (!isKlingPage) {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+              e.currentTarget.style.color = 'rgba(255,255,255,0.75)'
+            }
+          }}
+          onMouseLeave={e => {
+            if (!isKlingPage) {
+              e.currentTarget.style.background = 'transparent'
+              e.currentTarget.style.color = 'rgba(255,255,255,0.45)'
+            }
+          }}
+        >
+          <Film className="w-3.5 h-3.5 shrink-0" style={{ color: isKlingPage ? '#A78BFA' : 'rgba(255,255,255,0.3)' }} />
+          <span className="truncate">Kling Motion Control</span>
+          {isKlingPage && (
+            <span
+              style={{
+                marginLeft: 'auto', fontSize: '8px', fontWeight: '700',
+                background: 'rgba(124,58,237,0.25)', color: '#A78BFA',
+                padding: '1px 5px', borderRadius: '4px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.05em'
+              }}
+            >
+              NOVO
+            </span>
+          )}
+        </button>
       </div>
 
       {/* ── Divider ── */}

@@ -67,6 +67,187 @@ export async function GET(request) {
               gen.status = 'completed'
               gen.result_url = mockUrl
             }
+          } else if (gen.type === 'video' && gen.external_id && gen.external_id.startsWith('kling|')) {
+            // ─── Kling 3.0 Motion Control Status Check ───────────────────────────────
+            const klingApiKey = process.env.KLING_API_KEY
+            if (klingApiKey) {
+              const costMatch = gen.external_id.match(/cost:(\d+)/)
+              const reservedCredits = costMatch ? parseInt(costMatch[1]) : 0
+              const klingTaskId = gen.external_id.split('|id:')[1] || null
+
+              if (!klingTaskId) {
+                console.error(`[KLING-POLL] No task ID found in external_id=${gen.external_id}`)
+              } else {
+                try {
+                  const klingBaseUrl = process.env.KLING_MOTION_API_BASE_URL || 'https://api-singapore.klingai.com'
+                  const statusRes = await fetch(`${klingBaseUrl}/tasks?task_ids=${klingTaskId}`, {
+                    headers: {
+                      'Authorization': `Bearer ${klingApiKey}`,
+                      'Content-Type': 'application/json',
+                    },
+                  })
+
+                  if (statusRes.ok) {
+                    const statusData = await statusRes.json()
+                    const tasks = statusData?.data?.tasks || statusData?.tasks || []
+                    const task = Array.isArray(tasks) ? tasks[0] : tasks
+
+                    const taskStatus = task?.task_status || task?.status || ''
+                    console.log(`[KLING-POLL] gen.id=${gen.id}, klingTaskId=${klingTaskId}, status=${taskStatus}`)
+
+                    // ── Helper atômico para créditos (Optimistic Concurrency Control) ──
+                    const atomicAdjustCredits = async (userId, diff, isCharge) => {
+                      if (diff <= 0) return true
+                      let attempts = 0
+                      while (attempts < 3) {
+                        const { data: pData } = await supabaseAdmin
+                          .from('profiles')
+                          .select('credit_used, credit_limit, email')
+                          .eq('id', userId)
+                          .single()
+                        
+                        if (!pData) return false
+                        if (['gabrieljesus2030@gmail.com', 'Isah3469520@gmail.com'].includes(pData.email)) return true
+
+                        let newUsed = pData.credit_used
+                        if (isCharge) {
+                          newUsed += diff
+                          // Evita saldo negativo: se a cobrança estourar o limite, capamos no limite
+                          if (newUsed > pData.credit_limit) newUsed = pData.credit_limit
+                        } else {
+                          newUsed = Math.max(0, newUsed - diff)
+                        }
+
+                        const { data: upData } = await supabaseAdmin
+                          .from('profiles')
+                          .update({ credit_used: newUsed })
+                          .eq('id', userId)
+                          .eq('credit_used', pData.credit_used) // Optimistic lock
+                          .select('id')
+                        
+                        if (upData && upData.length > 0) return true
+                        attempts++
+                      }
+                      return false
+                    }
+
+                    if (taskStatus === 'succeeded') {
+                      // Localizar URL do vídeo nos outputs
+                      const outputs = task?.task_result?.outputs || task?.outputs || []
+                      const videoOutput = outputs.find(o => o.type === 'video')
+                      let videoUrl = videoOutput?.url || null
+
+                      if (!videoUrl && Array.isArray(outputs) && outputs.length > 0) {
+                        videoUrl = outputs[0]?.url || null
+                      }
+
+                      if (videoUrl) {
+                        // Obter duração real do output
+                        const outputDurationSeconds = task?.task_result?.duration || task?.duration || null
+                        const actualDuration = outputDurationSeconds ? Math.ceil(parseFloat(outputDurationSeconds)) : null
+
+                        let finalCredits = reservedCredits
+                        if (actualDuration) {
+                          const { calculateKlingCredits } = await import('@/lib/kling-config')
+                          finalCredits = calculateKlingCredits(gen.mode || 'standard', actualDuration)
+                        }
+
+                        // 1. Lock Atômico no Banco ANTES de baixar o vídeo (Evita duplicidade)
+                        const { data: lockedRows, error: lockErr } = await supabaseAdmin
+                          .from('generations')
+                          .update({ status: 'uploading_result' })
+                          .eq('id', gen.id)
+                          .eq('status', 'processing') // Garante que fomos o primeiro
+                          .select('id')
+
+                        if (lockErr) {
+                          console.error(`[KLING-POLL] Lock error for gen=${gen.id}:`, lockErr.message)
+                        } else if (!lockedRows || lockedRows.length === 0) {
+                          console.log(`[KLING-POLL] gen=${gen.id} lock perdido (já processado/baixando). Ignorado.`)
+                        } else {
+                          // 2. Este processo venceu. Baixar e arquivar vídeo.
+                          let finalUrl = videoUrl
+                          let uploadSuccess = false
+                          try {
+                            finalUrl = await uploadRemoteUrlToSupabase(videoUrl, 'video')
+                            uploadSuccess = true
+                          } catch (archiveErr) {
+                            console.error('[KLING-POLL] Failed to archive video:', archiveErr.message)
+                          }
+
+                          if (!uploadSuccess) {
+                            // Cenário G: Upload falhou. Reverter para failed e reembolsar para não entregar fantasma.
+                            await supabaseAdmin
+                              .from('generations')
+                              .update({ status: 'failed', completed_at: new Date().toISOString() })
+                              .eq('id', gen.id)
+                            
+                            if (reservedCredits > 0) {
+                              await atomicAdjustCredits(gen.user_id, reservedCredits, false)
+                            }
+                            gen.status = 'failed'
+                            console.log(`[KLING-POLL] Upload falhou. gen=${gen.id} alterado para failed e estornado.`)
+                          } else {
+                            // 3. Sucesso! Atualizar para completed.
+                            await supabaseAdmin
+                              .from('generations')
+                              .update({
+                                status: 'completed',
+                                result_url: finalUrl,
+                                credits_final: finalCredits,
+                                duration_seconds: actualDuration || gen.duration_seconds,
+                                completed_at: new Date().toISOString(),
+                              })
+                              .eq('id', gen.id)
+
+                            // 4. Cobrar ou Reembolsar a diferença atomicamente
+                            if (finalCredits < reservedCredits) {
+                              const diff = reservedCredits - finalCredits
+                              await atomicAdjustCredits(gen.user_id, diff, false)
+                              console.log(`[KLING-POLL] Refunded ${diff} excess credits for gen=${gen.id}`)
+                            } else if (finalCredits > reservedCredits) {
+                              const diff = finalCredits - reservedCredits
+                              await atomicAdjustCredits(gen.user_id, diff, true)
+                              console.log(`[KLING-POLL] Charged additional ${diff} credits for gen=${gen.id}`)
+                            }
+
+                            gen.status = 'completed'
+                            gen.result_url = finalUrl
+                            console.log(`[KLING-POLL] Succeeded! gen.id=${gen.id}, finalCredits=${finalCredits}`)
+                          }
+                        }
+                      }
+
+                    } else if (taskStatus === 'failed') {
+                      // Status Failed - Usa a mesma proteção lock
+                      const { data: failedRows, error: failErr } = await supabaseAdmin
+                        .from('generations')
+                        .update({ status: 'failed', completed_at: new Date().toISOString() })
+                        .eq('id', gen.id)
+                        .eq('status', 'processing') // guard: só quem faz a transição de processing para failed pode reembolsar
+                        .select('id')
+
+                      if (failErr) {
+                        console.error(`[KLING-POLL] Fail update error for gen=${gen.id}:`, failErr.message)
+                      } else if (!failedRows || failedRows.length === 0) {
+                        console.log(`[KLING-POLL] gen=${gen.id} falha já processada por outro polling (0 rows).`)
+                      } else {
+                        if (reservedCredits > 0) {
+                          await atomicAdjustCredits(gen.user_id, reservedCredits, false)
+                          console.log(`[KLING-POLL] Refunded ${reservedCredits} credits for failed gen=${gen.id}`)
+                        }
+                        gen.status = 'failed'
+                      }
+                    }
+                    // submitted / processing: aguardar próximo polling
+                  }
+                } catch (klingPollErr) {
+                  console.error(`[KLING-POLL] Error polling gen=${gen.id}:`, klingPollErr.message)
+                }
+              }
+            }
+            // ─── Fim Kling Status Check ───────────────────────────────────────────────
+
           } else if (gen.type === 'video') {
             // Live Video Status Check (GeminiGen.ai)
             const apiKey = process.env.GEMINIGEN_API_KEY
