@@ -56,6 +56,7 @@ const MODELS = [
   { key: 'grok-3', label: 'Grok - Vídeo', icon: Video, accent: 'purple', type: 'video' },
   { key: 'veo-3.1-fast', label: 'Veo 3.1 Fast', icon: Video, accent: 'green', type: 'video' },
   { key: 'veo-3.1-lite', label: 'Veo 3.1 Lite', icon: Video, accent: 'teal', type: 'video' },
+  { key: 'grok-1.5-lite', label: 'Grok 1.5 Lite Video', icon: Video, accent: 'purple', type: 'video' },
   { key: 'kling-motion', label: 'Kling 3.0 Motion Control', icon: Video, accent: 'orange', type: 'video' },
 ]
 
@@ -129,6 +130,10 @@ function DashboardContent() {
   const handleModelChange = (key) => {
     if (key === 'kling-motion') {
       router.push('/kling-motion')
+      return
+    }
+    if (key === 'grok-1.5-lite') {
+      router.push('/grok-video')
       return
     }
     setActiveModel(key)

@@ -37,6 +37,7 @@ const formatDate = (dateStr) => {
 const getModelDisplayName = (modelName) => {
   if (!modelName) return 'Desconhecido'
   if (modelName.includes('kling-3.0-motion-control') || modelName.includes('kling')) return 'Kling 3.0 Motion Control'
+  if (modelName.includes('grok-1.5-lite') || modelName.includes('grok-lite')) return 'Grok 1.5 Lite Video'
   if (modelName.includes('grok')) return 'Grok - Vídeo'
   if (modelName.includes('gpt-image')) return 'Gpt Image-2'
   return modelName

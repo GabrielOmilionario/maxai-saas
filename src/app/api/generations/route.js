@@ -272,7 +272,7 @@ export async function GET(request) {
                 console.log(`[SYNC-GENERATION-VIDEO] Status for external_id=${gen.external_id} is statusVal=${statusVal}`)
 
                 const isCompleted = statusVal === 2 || statusVal === '2' || statusVal === 'completed' || statusVal === 'success'
-                const isFailed = statusVal === 3 || statusVal === '3' || statusVal === 'failed' || statusVal === 'fail'
+                const isFailed = statusVal === 3 || statusVal === '3' || statusVal === -2 || statusVal === '-2' || statusVal === 'failed' || statusVal === 'fail'
 
                 if (isCompleted) {
                   let finalUrl = videoUrlVal

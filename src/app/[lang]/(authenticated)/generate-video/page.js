@@ -243,6 +243,11 @@ export default function GenerateVideoPage() {
                   value={model}
                   onChange={(e) => {
                     const newModel = e.target.value;
+                    if (newModel === 'grok-1.5-lite') {
+                      // Grok 1.5 Lite has its own studio + endpoint (/api/grok-video)
+                      router.push('/grok-video');
+                      return;
+                    }
                     setModel(newModel);
                     if (newModel.includes('veo')) {
                       setDuration('6');
@@ -257,6 +262,7 @@ export default function GenerateVideoPage() {
                   <option value="grok-3">Grok-3 Video</option>
                   <option value="veo-3.1-fast">Veo 3.1 Fast</option>
                   <option value="veo-3.1-lite">Veo 3.1 Lite</option>
+                  <option value="grok-1.5-lite">Grok 1.5 Lite Video</option>
                 </select>
               </div>
 
